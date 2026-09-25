@@ -1,0 +1,43 @@
+{
+    "_comment": "Virtual crossing lines with directional tripwires. Points are NORMALIZED (0.0-1.0), same convention as zones.json. 'side_a_label' and 'side_b_label' label the physical sides of the line (e.g. 'OUTSIDE' vs 'INSIDE') so the crossing direction is reported as 'OUTSIDE -> INSIDE' or 'INSIDE -> OUTSIDE'.",
+
+    "default": [
+        {
+            "name": "boundary_line",
+            "point_a": [0.55, 0.0],
+            "point_b": [0.55, 1.0],
+            "side_a_label": "OUTSIDE",
+            "side_b_label": "INSIDE"
+        }
+    ],
+
+    "BOP-01": [
+        {
+            "name": "zero_line_tripwire",
+            "point_a": [0.60, 0.0],
+            "point_b": [0.60, 1.0],
+            "side_a_label": "OUTSIDE",
+            "side_b_label": "INSIDE"
+        }
+    ],
+
+    "BOP-02": [
+        {
+            "name": "dark_sector_fence_tripwire",
+            "point_a": [0.50, 0.0],
+            "point_b": [0.50, 1.0],
+            "side_a_label": "OUTSIDE",
+            "side_b_label": "INSIDE"
+        }
+    ],
+
+    "BOP-03": [
+        {
+            "name": "checkpoint_barrier_tripwire",
+            "point_a": [0.0, 0.50],
+            "point_b": [1.0, 0.50],
+            "side_a_label": "OUTSIDE",
+            "side_b_label": "INSIDE"
+        }
+    ]
+}

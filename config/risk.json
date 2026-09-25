@@ -1,0 +1,9 @@
+{
+    "_comment": "OPTIONAL override file (Phase 17). Leave this file exactly as shipped (with only _comment) to use the defaults baked into app/config.py. To tune thresholds without touching Python code, set any of the keys below and restart the app.",
+
+    "_example_only": {
+        "dwell_high_seconds": 5,
+        "dwell_critical_seconds": 15,
+        "group_threshold": 3
+    }
+}

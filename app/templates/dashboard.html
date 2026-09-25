@@ -1,0 +1,2615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IBVAP · Integrated Border Video Analytics Platform (SIH 2026)</title>
+<style>
+  :root{
+    --bg:#0b0f15;
+    --panel:#131a24;
+    --panel2:#0e141c;
+    --line:#222d3a;
+    --ink:#e6edf3;
+    --dim:#7d8b99;
+    --amber:#e8a33d;
+    --cyan:#4fc1e0;
+    --low:#4caf6d;
+    --medium:#e8a33d;
+    --high:#e8712f;
+    --critical:#e5484d;
+    --accent:#3b82f6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 28px;
+    border-bottom:1px solid var(--line);
+    flex-wrap:wrap;
+    gap:12px;
+    background:rgba(19, 26, 36, 0.85);
+    backdrop-filter:blur(8px);
+    position:sticky;
+    top:0;
+    z-index:40;
+  }
+  header h1{ font-size:19px; letter-spacing:0.02em; margin:0; font-weight:600; display:flex; align-items:center; gap:8px; }
+  header h1 span.accent{ color:var(--cyan); }
+  header .sub{ color:var(--dim); font-size:12px; margin-top:2px; }
+  header .right{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  header .clock{ font-family:'SFMono-Regular', Consolas, monospace; color:var(--dim); font-size:12px; }
+
+  /* Tactical Critical Banner */
+  #critical-banner{
+    display:none;
+    background:linear-gradient(90deg, rgba(229,72,77,0.95), rgba(180,30,35,0.95));
+    color:#fff;
+    padding:10px 28px;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:0.03em;
+    align-items:center;
+    justify-content:space-between;
+    animation:pulseAlert 2s infinite ease-in-out;
+  }
+  /* Tactical Camera Tamper Alert & Feed Overlays */
+  #tamper-banner{
+    display:none;
+    background:linear-gradient(90deg, #8b0000, #c81e2b, #8b0000);
+    color:#fff;
+    padding:10px 28px;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:0.04em;
+    align-items:center;
+    justify-content:space-between;
+    animation:pulseAlert 1.5s infinite ease-in-out;
+    border-bottom:2px solid #ff4d6d;
+    box-shadow: 0 4px 18px rgba(200, 30, 43, 0.5);
+    position:sticky;
+    top:0;
+    z-index:45;
+  }
+  #tamper-banner.active{ display:flex; }
+  @keyframes tamperPulse{
+    0%{ transform: scale(1); filter: drop-shadow(0 0 2px #ff2a2a); }
+    100%{ transform: scale(1.15); filter: drop-shadow(0 0 10px #ff2a2a); }
+  }
+  @keyframes tamperCardGlow{
+    0%{ box-shadow: 0 0 8px rgba(255, 45, 85, 0.4); border-color: rgba(255, 45, 85, 0.6); }
+    100%{ box-shadow: 0 0 28px rgba(255, 45, 85, 0.95); border-color: #ff3344; }
+  }
+  .camera-card.tampered-card{
+    border: 2px solid #ff3344 !important;
+    animation: tamperCardGlow 1.2s infinite alternate !important;
+  }
+  .tamper-feed-overlay{
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    background: rgba(220, 20, 60, 0.94);
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    padding: 7px 10px;
+    border-radius: 4px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+    border: 1px solid #ff6b81;
+    pointer-events: none;
+    z-index: 5;
+    animation: tamperPulse 1s infinite alternate;
+  }
+
+  .summary-row{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:14px;
+    padding:16px 28px 0;
+  }
+  @media (max-width: 900px){ .summary-row{ grid-template-columns: repeat(2, 1fr); } }
+  .summary-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:14px 16px;
+  }
+  .summary-card .label{ color:var(--dim); font-size:11px; letter-spacing:0.06em; }
+  .summary-card .value{ font-size:26px; font-weight:600; margin-top:4px; font-family:'SFMono-Regular', Consolas, monospace; }
+  .summary-card.health-GOOD .value{ color:var(--low); }
+  .summary-card.health-DEGRADED .value{ color:var(--medium); }
+  .summary-card.health-CRITICAL .value, .summary-card.health-UNKNOWN .value{ color:var(--critical); }
+
+  .tabs{
+    display:flex;
+    gap:4px;
+    padding:16px 28px 0;
+    border-bottom:1px solid var(--line);
+    overflow-x:auto;
+  }
+  .tab-btn{
+    background:none;
+    border:none;
+    color:var(--dim);
+    font-size:13px;
+    padding:10px 16px;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    font-family:inherit;
+    white-space:nowrap;
+    transition:all 0.15s;
+  }
+  .tab-btn:hover{ color:var(--ink); }
+  .tab-btn.active{ color:var(--ink); border-bottom-color:var(--cyan); font-weight:500; }
+  .tab-panel{ display:none; padding:18px 28px 28px; }
+  .tab-panel.active{ display:block; }
+
+  .layout{ display:grid; grid-template-columns: 1fr 340px; gap:18px; align-items:start; }
+  @media (max-width: 980px){ .layout{ grid-template-columns: 1fr; } }
+
+  .cameras{ display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px; }
+
+  .camera-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    overflow:hidden;
+    cursor:pointer;
+    transition:border-color 0.15s, transform 0.1s;
+  }
+  .camera-card:hover{ border-color:var(--cyan); }
+  .camera-card .feed-wrap{ position:relative; background:#000; aspect-ratio: 16/9; }
+  .camera-card img{ width:100%; height:100%; object-fit:contain; display:block; background:#000; }
+  .camera-card .meta{ display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-top:1px solid var(--line); }
+  .camera-card .cam-id{ font-family:'SFMono-Regular', Consolas, monospace; font-size:13px; color:var(--ink); font-weight:600; }
+  .camera-card .cam-stats{ font-family:'SFMono-Regular', Consolas, monospace; font-size:12px; color:var(--dim); display:flex; gap:10px; align-items:center; }
+  .badge{ display:inline-block; padding:2px 9px; border-radius:3px; font-size:11px; font-weight:600; letter-spacing:0.03em; }
+  .badge.LOW{ background:rgba(76,175,109,0.15); color:var(--low); border:1px solid rgba(76,175,109,0.3); }
+  .badge.MEDIUM{ background:rgba(232,163,61,0.15); color:var(--medium); border:1px solid rgba(232,163,61,0.3); }
+  .badge.HIGH{ background:rgba(232,113,47,0.18); color:var(--high); border:1px solid rgba(232,113,47,0.3); }
+  .badge.CRITICAL{ background:rgba(229,72,77,0.2); color:var(--critical); border:1px solid rgba(229,72,77,0.4); }
+  .badge.ONLINE{ background:rgba(76,175,109,0.15); color:var(--low); }
+  .badge.OFFLINE{ background:rgba(125,139,153,0.15); color:var(--dim); }
+  .badge.RECONNECTING{ background:rgba(232,163,61,0.15); color:var(--medium); }
+  .badge.ERROR{ background:rgba(229,72,77,0.2); color:var(--critical); }
+  .badge.ACTIVE{ background:rgba(232,113,47,0.18); color:var(--high); }
+  .badge.ACKNOWLEDGED{ background:rgba(232,163,61,0.15); color:var(--medium); }
+  .badge.RESOLVED{ background:rgba(125,139,153,0.15); color:var(--dim); }
+  .badge.FALSE_ALARM{ background:rgba(150,150,150,0.15); color:#aaa; border:1px dashed #777; }
+
+  .panel-title{ font-size:12px; color:var(--dim); letter-spacing:0.06em; margin:0 0 10px; font-weight:600; }
+  .side-panel{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; margin-bottom:16px; }
+  .counts-row{ display:flex; flex-wrap:wrap; gap:6px 10px; font-family:'SFMono-Regular', Consolas, monospace; font-size:12px; color:var(--dim); }
+
+  .event-feed{ max-height:640px; overflow-y:auto; }
+  .event{ padding:9px 0; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .event:last-child{ border-bottom:none; }
+  .event .row1{ display:flex; justify-content:space-between; color:var(--dim); font-family:'SFMono-Regular', Consolas, monospace; font-size:11px; margin-bottom:3px; }
+  .event.RISK .row2{ color:var(--medium); }
+  .event.TAMPER .row1{ color:var(--critical); font-weight:700; }
+  .event.TAMPER .row2{ color:#ff4d6d; font-weight:600; }
+
+  .empty-state{ color:var(--dim); font-size:12.5px; padding:10px 0; }
+
+  /* Tables & Filters */
+  .filters{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
+  .filters select, .filters button, .btn-ctrl{
+    background:var(--panel2); color:var(--ink); border:1px solid var(--line);
+    border-radius:4px; padding:6px 11px; font-size:12px; font-family:inherit; cursor:pointer;
+  }
+  .filters button:hover, .btn-ctrl:hover{ border-color:var(--cyan); color:var(--ink); }
+  table.data-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.data-table th{ text-align:left; color:var(--dim); font-weight:500; font-size:11px; letter-spacing:0.04em; padding:8px 10px; border-bottom:1px solid var(--line); }
+  table.data-table td{ padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  table.data-table tr:hover td{ background:rgba(255,255,255,0.02); }
+  .mono{ font-family:'SFMono-Regular', Consolas, monospace; }
+  .action-btn{
+    background:var(--panel2); border:1px solid var(--line); color:var(--dim);
+    border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; margin-right:4px;
+    transition:all 0.15s;
+  }
+  .action-btn:hover{ border-color:var(--cyan); color:var(--ink); }
+  .action-btn.danger:hover{ border-color:var(--critical); color:var(--critical); }
+  .action-btn.success:hover{ border-color:var(--low); color:var(--low); }
+
+  /* Analytics */
+  .analytics-grid{ display:grid; grid-template-columns: repeat(2, 1fr); gap:18px; }
+  @media (max-width: 900px){ .analytics-grid{ grid-template-columns: 1fr; } }
+  .bar-row{ display:flex; align-items:center; gap:8px; margin:6px 0; font-size:12px; }
+  .bar-label{ width:110px; color:var(--dim); flex-shrink:0; font-family:'SFMono-Regular', Consolas, monospace; }
+  .bar-track{ flex:1; background:var(--panel2); border-radius:3px; height:14px; overflow:hidden; }
+  .bar-fill{ height:100%; background:var(--cyan); }
+  .bar-fill.LOW{ background:var(--low); }
+  .bar-fill.MEDIUM{ background:var(--medium); }
+  .bar-fill.HIGH{ background:var(--high); }
+  .bar-fill.CRITICAL{ background:var(--critical); }
+  .bar-count{ width:34px; text-align:right; color:var(--ink); font-family:'SFMono-Regular', Consolas, monospace; }
+  .data-note{ color:var(--dim); font-size:11.5px; margin-top:6px; }
+
+  /* Modals */
+  .modal-backdrop{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:50;
+    align-items:flex-start; justify-content:center; padding:30px 20px; overflow-y:auto;
+    backdrop-filter:blur(4px);
+  }
+  .modal-backdrop.open{ display:flex; }
+  .modal{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    max-width:920px; width:100%; padding:20px; box-shadow:0 12px 36px rgba(0,0,0,0.5);
+  }
+  .modal .modal-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--line); padding-bottom:10px; }
+  .modal .close-btn{ background:none; border:none; color:var(--dim); font-size:22px; cursor:pointer; }
+  .modal .close-btn:hover{ color:var(--ink); }
+  .modal video, .modal img.detail-feed{ width:100%; border-radius:6px; background:#000; }
+  .detail-grid{ display:grid; grid-template-columns: 2fr 1fr; gap:16px; margin-top:14px; }
+  @media (max-width: 700px){ .detail-grid{ grid-template-columns: 1fr; } }
+  .heatmap-grid{ display:grid; gap:1px; background:var(--line); border:1px solid var(--line); margin-top:8px; }
+  .heatmap-cell{ aspect-ratio:1; }
+
+  /* Calibration Canvas */
+  .canvas-wrap{ position:relative; background:#000; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
+  #calib-canvas{ width:100%; display:block; cursor:crosshair; }
+  .calib-controls{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center; }
+  .calib-controls button{ padding:7px 14px; border-radius:4px; font-size:12px; }
+
+  /* Dossier styling */
+  .dossier-wrap{ background:#0e131b; border:1px solid var(--line); border-radius:6px; padding:24px; font-family:'Segoe UI', sans-serif; }
+  .dossier-header{ display:flex; justify-content:space-between; border-bottom:2px solid var(--accent); padding-bottom:12px; margin-bottom:16px; }
+  .dossier-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  @media (max-width: 700px){ .dossier-grid{ grid-template-columns: 1fr; } }
+  .dossier-box{ background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:12px; }
+  .sop-item{ display:flex; gap:8px; align-items:flex-start; margin:6px 0; font-size:12.5px; }
+
+  /* Switch Toggle */
+  .toggle-switch{
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:12px;
+  }
+  .toggle-switch input{ display:none; }
+  .toggle-slider{
+    width:34px; height:18px; background:var(--line); border-radius:9px; position:relative; transition:0.2s;
+  }
+  .toggle-slider:before{
+    content:""; position:absolute; width:14px; height:14px; left:2px; top:2px; background:#fff; border-radius:50%; transition:0.2s;
+  }
+  .toggle-switch input:checked + .toggle-slider{ background:var(--cyan); }
+  /* Feature Test Center Styles */
+  .test-center-modal { max-width: 1100px !important; }
+  .tc-filter-pill { background: var(--panel2); border: 1px solid var(--line); color: var(--dim); padding: 5px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; transition: 0.2s; }
+  .tc-filter-pill:hover, .tc-filter-pill.active { background: rgba(0,229,255,0.12); color: var(--cyan); border-color: var(--cyan); }
+  .tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 12px; margin-top: 14px; }
+  .tc-card { background: #0c1118; border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s; }
+  .tc-card:hover { border-color: rgba(0,229,255,0.4); box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+  .tc-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+  .tc-card-title { font-size: 13px; font-weight: 700; color: var(--ink); letter-spacing: 0.02em; }
+  .tc-card-desc { font-size: 11.5px; color: var(--dim); line-height: 1.45; margin-bottom: 12px; flex: 1; }
+  .tc-card-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px; }
+  .tc-badge-ready { background: #132318; color: #34d399; border: 1px solid #059669; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+  .tc-badge-running { background: #0d2830; color: var(--cyan); border: 1px solid var(--cyan); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; animation: pulse 1s infinite alternate; }
+  .tc-badge-disabled { background: #2a2010; color: #fbbf24; border: 1px solid #d97706; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+  .tc-badge-na { background: #1f1f1f; color: #888; border: 1px solid #444; font-size: 10px; padding: 2px 6px; border-radius: 3px; }
+
+  /* Demo Session View */
+  .demo-session-modal { max-width: 1300px !important; width: 96% !important; background: #080c12 !important; }
+  .demo-feeds-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+  @media (max-width: 900px) { .demo-feeds-grid { grid-template-columns: 1fr; } }
+  .demo-feed-box { background: #000; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; position: relative; }
+  .demo-feed-box.primary { border-color: var(--cyan); box-shadow: 0 0 16px rgba(0,229,255,0.25); }
+  .demo-feed-box img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+  .demo-feed-tag { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.8); border: 1px solid var(--line); font-size: 10px; padding: 2px 6px; border-radius: 3px; color: var(--ink); }
+  .demo-feed-tag.primary { border-color: var(--cyan); color: var(--cyan); font-weight: 700; }
+  .demo-split-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  @media (max-width: 800px) { .demo-split-panel { grid-template-columns: 1fr; } }
+  .demo-telemetry-box { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; }
+  .demo-events-box { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; max-height: 280px; overflow-y: auto; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #dossier-modal, #dossier-modal * { visibility: visible; }
+    #dossier-modal { position: absolute; left: 0; top: 0; width: 100%; background: #fff; color: #000; padding: 0; }
+    .modal { border: none; box-shadow: none; max-width: 100%; }
+    .close-btn, .action-btn { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Tactical Critical Threat Alert Banner -->
+<div id="critical-banner">
+  <div style="display:flex; align-items:center; gap:10px;">
+    <span>⚠️ CRITICAL THREAT DETECTED</span>
+    <span id="critical-banner-text" style="font-weight:normal; opacity:0.9;">Sector perimeter breach in progress.</span>
+  </div>
+  <div>
+    <button class="action-btn" style="background:#fff; color:#b41e23; font-weight:600;" onclick="showTab('alerts')">Review Alert</button>
+  </div>
+</div>
+
+<!-- Tactical Camera Tamper Alert Banner -->
+<div id="tamper-banner">
+  <div style="display:flex; align-items:center; gap:12px;">
+    <span style="font-size:20px; animation:tamperPulse 0.8s infinite alternate;">🚨</span>
+    <span>HARDWARE SENSOR TAMPER ACTIVE:</span>
+    <span id="tamper-banner-text" style="font-weight:normal; opacity:0.95;">Camera optical feed obstructed or blinded.</span>
+  </div>
+  <div style="display:flex; gap:10px; align-items:center;">
+    <button class="action-btn" style="background:#fff; color:#8b0000; font-weight:700; border:none; padding:5px 14px;" onclick="reopenTamperModal()">🚨 View Tamper Popup</button>
+    <button class="action-btn" style="background:rgba(0,0,0,0.4); color:#fff; border:1px solid rgba(255,255,255,0.4); padding:5px 10px;" onclick="dismissTamperBanner()">Dismiss Banner</button>
+  </div>
+</div>
+
+<header>
+  <div>
+    <h1>IBVAP <span class="accent">·</span> Border Surveillance Console</h1>
+    <div class="sub">Integrated CIBMS Intelligent Video Analytics · Team SeemaDrishti (SIH 2026)</div>
+  </div>
+  <div class="right">
+    <!-- Role Switcher -->
+    <span style="background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:4px 8px; font-size:12px; display:flex; align-items:center; gap:8px;">
+      <span id="user-display">Capt. Yashwant</span>
+      <span class="badge HIGH" id="user-role">OFFICER</span>
+      <button class="action-btn" onclick="toggleUserRole()" style="margin:0; padding:2px 6px; font-size:10px;">Switch Role</button>
+    </span>
+
+    <!-- CIBMS Edge-to-Central Satellite Sync -->
+    <span style="background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:4px 8px; font-size:12px; display:flex; align-items:center; gap:8px;">
+      <span class="badge ONLINE" id="sync-badge">🛰️ HQ SYNC: ONLINE</span>
+      <button class="action-btn" onclick="toggleSyncLink()" style="margin:0; padding:2px 6px; font-size:10px;" title="Simulate Satellite Link Cut">Toggle Link</button>
+      <button class="action-btn" onclick="triggerSyncNow()" style="margin:0; padding:2px 6px; font-size:10px;">Sync Now</button>
+    </span>
+
+    <!-- Audio Threat Alerts -->
+    <button class="btn-ctrl" id="audio-toggle-btn" onclick="toggleAudio()" style="font-size:11px;">
+      🔊 Sound: ON
+    </button>
+
+    <!-- Feature Test Center (SIH 2026 Judge Verification) -->
+    <button class="btn-ctrl" id="btn-feature-test-center" onclick="openFeatureTestCenter()" style="font-size:11px; font-weight:700; color:var(--cyan); border:1px solid var(--cyan); background:rgba(0,229,255,0.08); padding:4px 10px;" title="Launch Feature Test Center">
+      🧪 TEST ALL FEATURES
+    </button>
+
+    <!-- Global Confidence -->
+    <span style="display:flex; align-items:center; gap:6px; color:var(--dim); font-size:12px;">
+      Conf:
+      <input type="range" id="confidence-slider" min="0.1" max="0.9" step="0.05" value="0.35"
+             onchange="setGlobalConfidence(this.value)" style="vertical-align:middle; width:70px;">
+      <span id="confidence-value" class="mono">0.35</span>
+    </span>
+
+    <span class="badge" id="system-health-badge">SYSTEM STATUS</span>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<div class="summary-row">
+  <div class="summary-card" id="card-cameras"><div class="label">CAMERAS ONLINE</div><div class="value" id="summary-cameras">–</div></div>
+  <div class="summary-card"><div class="label">ACTIVE TRACKS</div><div class="value" id="summary-tracks">–</div></div>
+  <div class="summary-card"><div class="label">ACTIVE ALERTS</div><div class="value" id="summary-alerts">–</div></div>
+  <div class="summary-card"><div class="label">CRITICAL THREATS</div><div class="value" id="summary-critical">–</div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="dashboard">Multi-Cam Feeds</button>
+  <button class="tab-btn" data-tab="alerts">Tactical Alerts <span id="alerts-tab-badge" class="badge HIGH" style="display:none; font-size:10px; margin-left:4px; padding:1px 6px;">0</span></button>
+  <button class="tab-btn" data-tab="analytics">Analytics &amp; Zones</button>
+  <button class="tab-btn" data-tab="history">Event History</button>
+  <button class="tab-btn" data-tab="security">ANPR / Face / Night</button>
+  <button class="tab-btn" data-tab="audit">Compliance Audit Log</button>
+</div>
+
+<!-- ===================== DASHBOARD TAB ===================== -->
+<div class="tab-panel active" id="tab-dashboard">
+  <div class="layout">
+    <div class="cameras" id="cameras">
+      {% for camera_id in camera_ids %}
+      <div class="camera-card" id="card-{{ camera_id }}" onclick="openCameraDetail('{{ camera_id }}')">
+        <div class="feed-wrap">
+          <img src="/video_feed/{{ camera_id }}" alt="{{ camera_id }} feed">
+        </div>
+        <div class="meta">
+          <span class="cam-id">{{ camera_id }}</span>
+          <span class="cam-stats">
+            <span id="fps-{{ camera_id }}">-- FPS</span>
+            <span class="badge OFFLINE" id="status-{{ camera_id }}">OFFLINE</span>
+            <span class="badge LOW" id="risk-{{ camera_id }}">LOW</span>
+          </span>
+        </div>
+        <div class="meta" style="border-top:none; padding-top:0;">
+          <div class="counts-row" id="counts-{{ camera_id }}">no objects detected</div>
+        </div>
+        <div class="meta" style="border-top:none; padding-top:0; gap:6px; flex-wrap:wrap;" onclick="event.stopPropagation()">
+          <button class="action-btn" id="pause-btn-{{ camera_id }}" onclick="toggleCameraPause('{{ camera_id }}')">Pause</button>
+          <button class="action-btn" id="power-btn-{{ camera_id }}" onclick="toggleCameraPower('{{ camera_id }}')">Stop</button>
+          <button class="action-btn" onclick="openCalibrationModal('{{ camera_id }}')" style="border-color:var(--cyan); color:var(--cyan);">📐 Calibrate</button>
+          <select class="filters action-btn" style="padding:2px 6px; font-size:11px; margin:0;" onchange="simulateTamper('{{ camera_id }}', this.value)" title="Simulate Hardware Tampering">
+            <option value="">⚡ Test Tamper: Normal</option>
+            <option value="OCCLUSION">Lens Covered (Occlusion)</option>
+            <option value="BLINDING">Laser Blinding</option>
+            <option value="DEFOCUS">Spray Defocus</option>
+          </select>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="sidebar">
+      <div class="side-panel">
+        <p class="panel-title">SECTOR STATUS &amp; HEALTH</p>
+        <div class="counts-row" id="system-summary">initializing…</div>
+        <div style="margin-top:10px; font-size:11px; color:var(--dim);" id="sync-summary-detail">
+          Edge Queue: 0 events pending central HQ synchronization.
+        </div>
+      </div>
+      <div class="side-panel">
+        <p class="panel-title">LIVE INCIDENT &amp; EVENT FEED</p>
+        <div class="event-feed" id="events">
+          <div class="empty-state">Waiting for events…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ALERTS TAB ===================== -->
+<div class="tab-panel" id="tab-alerts">
+  <div class="filters">
+    <select id="alert-status-filter">
+      <option value="ACTIVE" selected>Active</option>
+      <option value="ACKNOWLEDGED">Acknowledged</option>
+      <option value="RESOLVED">Resolved</option>
+      <option value="FALSE_ALARM">False Alarm</option>
+      <option value="">All statuses</option>
+    </select>
+    <select id="alert-severity-filter">
+      <option value="">All severities</option>
+      <option value="CRITICAL">Critical</option>
+      <option value="HIGH">High</option>
+      <option value="MEDIUM">Medium</option>
+      <option value="LOW">Low</option>
+    </select>
+    <select id="alert-sort">
+      <option value="newest" selected>Newest first</option>
+      <option value="severity">By severity</option>
+    </select>
+    <button onclick="refreshAlerts()">Refresh</button>
+  </div>
+  <table class="data-table">
+    <thead><tr>
+      <th>Time</th><th>Severity</th><th>Camera</th><th>Track</th><th>Event</th>
+      <th>Description</th><th>Status</th><th>Tactical Actions</th>
+    </tr></thead>
+    <tbody id="alerts-body"><tr><td colspan="8" class="empty-state">No alerts yet.</td></tr></tbody>
+  </table>
+</div>
+
+<!-- ===================== ANALYTICS TAB ===================== -->
+<div class="tab-panel" id="tab-analytics">
+  <div class="analytics-grid">
+    <div class="side-panel">
+      <p class="panel-title">EVENTS BY SEVERITY</p>
+      <div id="chart-severity"></div>
+    </div>
+    <div class="side-panel">
+      <p class="panel-title">EVENTS BY CAMERA</p>
+      <div id="chart-camera"></div>
+    </div>
+    <div class="side-panel">
+      <p class="panel-title">EVENTS OVER TIME (per minute)</p>
+      <div id="chart-time"></div>
+    </div>
+    <div class="side-panel">
+      <p class="panel-title">TRACKED OBJECT COUNTS (distinct tracks)</p>
+      <div id="chart-objects"></div>
+    </div>
+  </div>
+  <div class="side-panel" style="margin-top:18px;">
+    <p class="panel-title">ZONE VIOLATIONS &amp; DWELL METRICS</p>
+    <table class="data-table">
+      <thead><tr><th>Zone</th><th>Entries</th><th>Exits</th><th>Violations</th><th>Avg Dwell (s)</th></tr></thead>
+      <tbody id="zone-stats-body"><tr><td colspan="5" class="empty-state">No zone data yet.</td></tr></tbody>
+    </table>
+  </div>
+  <div class="data-note" id="analytics-note"></div>
+</div>
+
+<!-- ===================== HISTORY TAB ===================== -->
+<div class="tab-panel" id="tab-history">
+  <div class="filters">
+    <select id="hist-camera-filter"><option value="">All cameras</option>
+      {% for camera_id in camera_ids %}<option value="{{ camera_id }}">{{ camera_id }}</option>{% endfor %}
+    </select>
+    <select id="hist-severity-filter">
+      <option value="">All severities</option>
+      <option value="CRITICAL">Critical</option><option value="HIGH">High</option>
+      <option value="MEDIUM">Medium</option><option value="LOW">Low</option>
+    </select>
+    <select id="hist-type-filter">
+      <option value="">All event types</option>
+      <option value="ZONE_ENTER">ZONE_ENTER</option><option value="ZONE_EXIT">ZONE_EXIT</option>
+      <option value="LOITERING">LOITERING</option><option value="EXTENDED_DWELL">EXTENDED_DWELL</option>
+      <option value="GROUP_INCURSION">GROUP_INCURSION</option><option value="LINE_CROSSING">LINE_CROSSING</option>
+      <option value="OBJECT_DETECTED">OBJECT_DETECTED</option>
+      <option value="ANPR_PLATE_READ">ANPR_PLATE_READ</option>
+      <option value="FACE_RECOGNITION">FACE_RECOGNITION</option>
+      <option value="NIGHT_MOVEMENT">NIGHT_MOVEMENT</option>
+      <option value="CAMERA_TAMPER_OCCLUSION">CAMERA_TAMPER_OCCLUSION</option>
+      <option value="CAMERA_TAMPER_BLINDING">CAMERA_TAMPER_BLINDING</option>
+      <option value="CAMERA_TAMPER_DEFOCUS">CAMERA_TAMPER_DEFOCUS</option>
+      <option value="ALERT_FALSE_ALARM">ALERT_FALSE_ALARM</option>
+    </select>
+    <button onclick="refreshHistory()">Apply Filters</button>
+  </div>
+  <table class="data-table">
+    <thead><tr><th>Time</th><th>Camera</th><th>Track</th><th>Zone</th><th>Event Type</th><th>Severity</th><th>Description</th></tr></thead>
+    <tbody id="history-body"><tr><td colspan="7" class="empty-state">No history yet.</td></tr></tbody>
+  </table>
+</div>
+
+<!-- ===================== SECURITY TAB (ANPR / FACE / NIGHT) ===================== -->
+<div class="tab-panel" id="tab-security">
+  <div class="side-panel" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; background:var(--panel2);">
+    <div>
+      <h3 style="margin:0; font-size:14px;">Specialized Computer Vision Pipelines</h3>
+      <div style="font-size:11.5px; color:var(--dim); margin-top:2px;">Live toggling of Edge AI submodules for vehicle license plate recognition and authorized personnel matching.</div>
+    </div>
+    <div style="display:flex; gap:20px; align-items:center;">
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggle-anpr" onchange="toggleFeaturePipeline('anpr', this.checked)">
+        <span class="toggle-slider"></span>
+        <span>ANPR (HSRP)</span>
+      </label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggle-face" onchange="toggleFeaturePipeline('face', this.checked)">
+        <span class="toggle-slider"></span>
+        <span>Face Recognition</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar" style="flex:1;">
+      <div class="side-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:8px; gap:8px;">
+          <p class="panel-title" style="margin:0;">ANPR — AUTOMATIC NUMBER PLATE RECOGNITION (INDIAN HSRP)</p>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <label style="font-size:11.5px; color:var(--ink); display:flex; align-items:center; gap:6px; cursor:pointer; background:rgba(255,255,255,0.04); padding:3px 8px; border-radius:4px; border:1px solid var(--border);">
+              <input type="checkbox" id="anpr-repeat-only-toggle" onchange="refreshSecurityTab()">
+              <span style="font-weight:600; color:#f87171;">🚨 Filter Repeat Only (≥2 Visits)</span>
+            </label>
+            <button class="btn-ctrl" id="anpr-mode-toggle-btn" onclick="toggleAnprViewMode()" style="font-size:11px; padding:3px 8px;">
+              Mode: Unique Plates
+            </button>
+          </div>
+        </div>
+        <div class="counts-row" id="anpr-summary">initializing…</div>
+        <table class="data-table">
+          <thead id="anpr-thead">
+            <tr>
+              <th>Last Seen</th>
+              <th>Camera</th>
+              <th>Vehicle Track</th>
+              <th>Plate Read</th>
+              <th>Visit Frequency</th>
+              <th>Confidence</th>
+              <th>Evidence</th>
+            </tr>
+          </thead>
+          <tbody id="anpr-body"><tr><td colspan="7" class="empty-state">No ANPR reads yet.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="side-panel">
+        <p class="panel-title">FACE RECOGNITION — AUTHORIZED PERSONNEL GALLERY</p>
+        <div class="counts-row" id="face-summary">initializing…</div>
+        <table class="data-table">
+          <thead><tr><th>Time</th><th>Camera</th><th>Person Track</th><th>Identity</th><th>Confidence</th><th>Evidence</th></tr></thead>
+          <tbody id="face-known-body"><tr><td colspan="6" class="empty-state">No known-identity matches yet.</td></tr></tbody>
+        </table>
+        <p class="panel-title" style="margin-top:14px;">UNKNOWN / UNENROLLED FACES</p>
+        <table class="data-table">
+          <thead><tr><th>Time</th><th>Camera</th><th>Person Track</th><th>Confidence</th></tr></thead>
+          <tbody id="face-unknown-body"><tr><td colspan="4" class="empty-state">No unknown-face events yet.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="side-panel">
+        <p class="panel-title">NIGHT / LOW-LIGHT MOVEMENT &amp; TAMPER STATUS</p>
+        <div class="counts-row" id="night-summary">initializing…</div>
+        <table class="data-table">
+          <thead><tr><th>Time</th><th>Camera</th><th>Track</th><th>Zone</th><th>Severity</th><th>Reason</th></tr></thead>
+          <tbody id="night-body"><tr><td colspan="6" class="empty-state">No night-movement events yet.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== COMPLIANCE AUDIT LOG TAB ===================== -->
+<div class="tab-panel" id="tab-audit">
+  <div class="filters">
+    <span style="font-size:12px; color:var(--dim);">Military &amp; CIBMS Chain-of-Custody Command Audit Trail</span>
+    <div style="margin-left:auto; display:flex; gap:8px;">
+      <a href="/api/audit/export?format=csv" class="btn-ctrl" style="text-decoration:none; display:inline-flex; align-items:center;" download>📥 Export Audit (CSV)</a>
+      <a href="/api/audit/export?format=json" class="btn-ctrl" style="text-decoration:none; display:inline-flex; align-items:center;" download>💾 Export Audit (JSON)</a>
+      <button onclick="refreshAuditLogs(true)">🔄 Refresh</button>
+    </div>
+  </div>
+  <table class="data-table">
+    <thead><tr>
+      <th>Timestamp</th><th>Operator</th><th>Role</th><th>Action Type</th><th>Target / Asset</th><th>Operation Details</th>
+    </tr></thead>
+    <tbody id="audit-body"><tr><td colspan="6" class="empty-state">No audit records recorded yet.</td></tr></tbody>
+  </table>
+</div>
+
+<!-- ===================== CAMERA DETAIL MODAL ===================== -->
+<div class="modal-backdrop" id="camera-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title" style="margin:0; font-size:16px;">Camera Detail View</h2>
+      <button class="close-btn" onclick="closeCameraDetail()">&times;</button>
+    </div>
+    <img class="detail-feed" id="modal-feed" src="" alt="camera feed">
+    <div class="detail-grid">
+      <div>
+        <p class="panel-title">ACTIVITY HEATMAP (Accumulated Observed Positions)</p>
+        <div class="heatmap-grid" id="modal-heatmap"></div>
+      </div>
+      <div>
+        <p class="panel-title">TELEMETRY &amp; STATUS</p>
+        <div id="modal-status" class="counts-row" style="flex-direction:column; align-items:flex-start; gap:6px;"></div>
+        <p class="panel-title" style="margin-top:14px;">ACTIVE ALERTS</p>
+        <div id="modal-alerts" class="counts-row" style="flex-direction:column; align-items:flex-start; gap:6px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ZONE / LINE CALIBRATION MODAL ===================== -->
+<div class="modal-backdrop" id="calibration-modal">
+  <div class="modal" style="max-width:980px;">
+    <div class="modal-header">
+      <div>
+        <h2 style="margin:0; font-size:16px;">Interactive Geofence &amp; Virtual Line Studio</h2>
+        <div style="font-size:11px; color:var(--dim); margin-top:2px;">Click snapshot canvas to calibrate intrusion zones and tripwires. Coordinates auto-normalize (0.0 to 1.0).</div>
+      </div>
+      <button class="close-btn" onclick="closeCalibrationModal()">&times;</button>
+    </div>
+
+    <div class="filters" style="margin-bottom:8px;">
+      <label style="font-size:12px; color:var(--dim);">Camera:
+        <select id="calib-camera-select" onchange="loadCalibrationSnapshot()">
+          {% for camera_id in camera_ids %}<option value="{{ camera_id }}">{{ camera_id }}</option>{% endfor %}
+        </select>
+      </label>
+      <label style="font-size:12px; color:var(--dim);">Tool:
+        <select id="calib-tool-select" onchange="changeCalibTool()">
+          <option value="polygon">Restricted Polygon Zone</option>
+          <option value="line">Virtual Crossing Line</option>
+        </select>
+      </label>
+      <label style="font-size:12px; color:var(--dim);">Zone/Line Name:
+        <input type="text" id="calib-name-input" value="restricted_zone" style="background:var(--panel2); color:var(--ink); border:1px solid var(--line); border-radius:4px; padding:4px 8px; font-size:12px; width:130px;">
+      </label>
+      <label style="font-size:12px; color:var(--dim);">Severity:
+        <select id="calib-severity-select">
+          <option value="HIGH">HIGH</option>
+          <option value="CRITICAL">CRITICAL</option>
+          <option value="MEDIUM">MEDIUM</option>
+          <option value="LOW">LOW</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="calib-canvas" width="940" height="528"></canvas>
+    </div>
+
+    <div class="calib-controls">
+      <button class="btn-ctrl" onclick="undoCalibPoint()">↩ Undo Point</button>
+      <button class="btn-ctrl" onclick="clearCalibPoints()">✖ Clear Drawn</button>
+      <button class="btn-ctrl" onclick="loadCalibrationSnapshot()">🔄 Refresh Snapshot</button>
+      <button class="btn-ctrl" onclick="saveCalibration()" style="background:var(--accent); color:#fff; font-weight:600; margin-left:auto;">
+        💾 Save &amp; Apply Live to Worker
+      </button>
+    </div>
+    <div id="calib-status-msg" style="margin-top:8px; font-size:12px; color:var(--cyan);"></div>
+  </div>
+</div>
+
+<!-- ===================== TACTICAL INCIDENT DOSSIER MODAL ===================== -->
+<div class="modal-backdrop" id="dossier-modal">
+  <div class="modal" style="max-width:860px;">
+    <div class="modal-header">
+      <h2 style="margin:0; font-size:16px; color:var(--ink);">BSF CIBMS Tactical Incident Dossier</h2>
+      <button class="close-btn" onclick="closeDossierModal()">&times;</button>
+    </div>
+
+    <div class="dossier-wrap" id="dossier-content">
+      <!-- Injected by JavaScript -->
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px; flex-wrap:wrap;">
+      <a id="dossier-export-md-btn" href="#" class="btn-ctrl" style="text-decoration:none; display:inline-flex; align-items:center;" download>📄 Export Dossier (.MD)</a>
+      <a id="dossier-export-json-btn" href="#" class="btn-ctrl" style="text-decoration:none; display:inline-flex; align-items:center;" download>💾 Export Dossier (.JSON)</a>
+      <button class="btn-ctrl" onclick="window.print()">🖨️ Print / Export PDF</button>
+      <button class="btn-ctrl" onclick="closeDossierModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== FALSE ALARM PROMPT MODAL ===================== -->
+<div class="modal-backdrop" id="false-alarm-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3 style="margin:0; font-size:15px;">Flag Incident as False Alarm</h3>
+      <button class="close-btn" onclick="closeFalseAlarmModal()">&times;</button>
+    </div>
+    <p style="font-size:12.5px; color:var(--dim); margin-top:0;">
+      Provide justification notes. This record is logged for operational audit and feeds the retraining feedback loop.
+    </p>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px; color:var(--dim); display:block; margin-bottom:4px;">Operator Justification:</label>
+      <select id="fa-reason-preset" onchange="document.getElementById('fa-notes-input').value = this.value" style="width:100%; background:var(--panel2); color:var(--ink); border:1px solid var(--line); border-radius:4px; padding:6px; font-size:12px; margin-bottom:8px;">
+        <option value="Lens glare / optical solar reflection">Lens glare / optical solar reflection</option>
+        <option value="Authorized patrol maintenance team">Authorized patrol maintenance team</option>
+        <option value="Harmless wildlife / stray animal trigger">Harmless wildlife / stray animal trigger</option>
+        <option value="Thermal shadow artifact">Thermal shadow artifact</option>
+        <option value="Other operator override">Other operator override</option>
+      </select>
+      <textarea id="fa-notes-input" rows="3" style="width:100%; background:var(--panel2); color:var(--ink); border:1px solid var(--line); border-radius:4px; padding:8px; font-size:12px; font-family:inherit;">Lens glare / optical solar reflection</textarea>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button class="btn-ctrl" onclick="closeFalseAlarmModal()">Cancel</button>
+      <button class="btn-ctrl" style="background:var(--critical); color:#fff;" onclick="submitFalseAlarm()">Confirm False Alarm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CAMERA TAMPER EMERGENCY POPUP MODAL ===================== -->
+<div class="modal-backdrop" id="tamper-modal" style="z-index:9999;">
+  <div class="modal" style="max-width:620px; border:2px solid var(--critical); box-shadow:0 0 45px rgba(255, 45, 85, 0.85); background:#14080a;">
+    <div class="modal-header" style="border-bottom:2px solid rgba(255, 45, 85, 0.5); padding-bottom:12px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="font-size:28px; animation:tamperPulse 0.9s infinite alternate;">🚨</span>
+        <div>
+          <div style="font-size:11px; letter-spacing:0.12em; color:var(--critical); font-weight:800;">PERIMETER SENSOR TAMPER DEFENSE</div>
+          <h2 style="margin:2px 0 0; font-size:17px; color:#fff;" id="tamper-modal-headline">CRITICAL: CAMERA SENSOR TAMPERING DETECTED</h2>
+        </div>
+      </div>
+      <button class="close-btn" onclick="closeTamperModal()">&times;</button>
+    </div>
+    
+    <div id="tamper-modal-body">
+      <!-- Injected dynamically -->
+    </div>
+  </div>
+</div>
+
+<!-- ===================== FEATURE TEST CENTER MODAL ===================== -->
+<div class="modal-backdrop" id="test-center-modal">
+  <div class="modal test-center-modal">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:11px; letter-spacing:0.12em; color:var(--cyan); font-weight:800;">SIH 2026 SURVEILLANCE VERIFICATION SUITE</div>
+        <h2 style="margin:2px 0 0; font-size:18px; color:var(--ink);">FEATURE TEST CENTER</h2>
+        <div style="font-size:12px; color:var(--dim); margin-top:2px;">Select a capability to launch its dedicated live demonstration session.</div>
+      </div>
+      <button class="close-btn" onclick="closeFeatureTestCenter()">&times;</button>
+    </div>
+
+    <!-- Action & Filter Bar -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:12px;">
+      <div style="display:flex; gap:6px; flex-wrap:wrap;" id="tc-filters">
+        <button class="tc-filter-pill active" onclick="filterTestCenter('All', this)">All (14)</button>
+        <button class="tc-filter-pill" onclick="filterTestCenter('Computer Vision', this)">Computer Vision</button>
+        <button class="tc-filter-pill" onclick="filterTestCenter('Identity & Access', this)">Identity &amp; Access</button>
+        <button class="tc-filter-pill" onclick="filterTestCenter('Perimeter & Zones', this)">Perimeter &amp; Zones</button>
+        <button class="tc-filter-pill" onclick="filterTestCenter('Behavioral Analytics', this)">Behavioral</button>
+        <button class="tc-filter-pill" onclick="filterTestCenter('Sensor Analytics', this)">Sensor Health</button>
+        <button class="tc-filter-pill" onclick="filterTestCenter('Threat Assessment', this)">Threat Assessment</button>
+      </div>
+      <div>
+        <button class="btn-ctrl" id="btn-complete-demo" onclick="triggerCompleteDemoSequence()" style="background:#092e27; border:1px solid #10b981; color:#34d399; font-weight:700; padding:6px 14px; font-size:12px; border-radius:4px; display:flex; align-items:center; gap:6px; cursor:pointer;">
+          ▶ RUN COMPLETE DEMO
+        </button>
+      </div>
+    </div>
+
+    <!-- Cards Container -->
+    <div class="tc-grid" id="tc-cards-container">
+      <div class="empty-state">Loading capability inventory...</div>
+    </div>
+
+    <!-- Complete Demo Progress Panel (visible when complete demo is running) -->
+    <div id="tc-complete-demo-panel" style="display:none; margin-top:16px; background:#071217; border:1px solid var(--cyan); border-radius:6px; padding:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:18px;">⚡</span>
+          <div>
+            <div style="font-size:11px; color:var(--cyan); font-weight:700; letter-spacing:0.08em;">CURATED COMPLETE DEMO SEQUENCE IN PROGRESS</div>
+            <div id="tc-complete-progress-title" style="font-size:14px; font-weight:700; color:#fff;">Initializing sequence...</div>
+          </div>
+        </div>
+        <button class="action-btn" onclick="stopDemoSession()" style="background:#2a1114; border-color:#e11d48; color:#fda4af; font-size:11px; padding:4px 10px;">Stop Sequence</button>
+      </div>
+      <div id="tc-complete-demo-table" style="max-height:220px; overflow-y:auto; font-size:11.5px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== FEATURE DEMO SESSION VIEW ===================== -->
+<div class="modal-backdrop" id="test-center-demo-modal" style="z-index:90;">
+  <div class="modal demo-session-modal">
+    <!-- Top Bar -->
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:12px;">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <button class="action-btn" onclick="exitDemoSession(true)" style="background:var(--panel2); border:1px solid var(--line); color:var(--ink); font-size:11.5px; padding:5px 12px; font-weight:600;">
+          ← Back to Feature Test Center
+        </button>
+        <div>
+          <div style="font-size:10.5px; color:var(--cyan); font-weight:700; letter-spacing:0.1em;">ISOLATED DEMO SESSION · LIVE AI PIPELINE</div>
+          <h2 id="demo-feature-title" style="margin:2px 0 0; font-size:17px; color:var(--ink);">Feature Name</h2>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="font-size:11px; color:var(--dim);">Elapsed: <span id="demo-session-elapsed" class="mono" style="color:var(--cyan); font-weight:700;">0.0s</span></div>
+        <button class="action-btn" onclick="exitDemoSession(false)" style="background:#1e1418; border:1px solid var(--critical); color:#fda4af; font-size:11.5px; padding:5px 12px; font-weight:600;">
+          Return to Normal Mode
+        </button>
+      </div>
+    </div>
+
+    <!-- Short Description Banner (POINT 10) -->
+    <div id="demo-feature-desc-banner" style="background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.25); border-radius:4px; padding:8px 12px; font-size:12px; color:var(--ink); line-height:1.4; margin-bottom:12px;">
+      Description
+    </div>
+
+    <!-- 3 Simultaneous Live Camera Feeds -->
+    <div class="demo-feeds-grid">
+      <div class="demo-feed-box" id="demo-box-01">
+        <div class="demo-feed-tag" id="demo-tag-01">DEMO-01 (Sector North)</div>
+        <img id="demo-feed-01" src="" alt="DEMO-01 stream">
+      </div>
+      <div class="demo-feed-box" id="demo-box-02">
+        <div class="demo-feed-tag" id="demo-tag-02">DEMO-02 (Sector East)</div>
+        <img id="demo-feed-02" src="" alt="DEMO-02 stream">
+      </div>
+      <div class="demo-feed-box" id="demo-box-03">
+        <div class="demo-feed-tag" id="demo-tag-03">DEMO-03 (Checkpoint Gate)</div>
+        <img id="demo-feed-03" src="" alt="DEMO-03 stream">
+      </div>
+    </div>
+
+    <!-- Feature-Specific Telemetry & Event Split Panel -->
+    <div class="demo-split-panel">
+      <!-- Left Column: Feature Output / Telemetry -->
+      <div class="demo-telemetry-box">
+        <div style="font-size:11px; letter-spacing:0.08em; color:var(--dim); font-weight:700; margin-bottom:8px;">FEATURE-SPECIFIC TELEMETRY</div>
+        <div id="demo-telemetry-content" style="font-size:12px; line-height:1.5;">
+          Loading telemetry...
+        </div>
+      </div>
+
+      <!-- Right Column: Filtered Alerts & Events -->
+      <div class="demo-events-box">
+        <div style="font-size:11px; letter-spacing:0.08em; color:var(--dim); font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between;">
+          <span>FILTERED DEMO EVENTS</span>
+          <span id="demo-event-count" class="mono" style="color:var(--cyan);">0 events</span>
+        </div>
+        <div id="demo-events-list">
+          <div class="empty-state">Waiting for feature events...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentModalCamera = null;
+let currentAlertForFalseAlarm = null;
+let audioEnabled = true;
+let lastSeenAlertIds = new Set();
+let currentUser = { username: "officer", role: "OFFICER", display_name: "Capt. Yashwant" };
+
+// ---------- Clock ----------
+function tickClock(){
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+// ---------- Audio Alert Synthesizer (Web Audio API) ----------
+let audioCtx = null;
+function playThreatTone(isCritical = false){
+  if(!audioEnabled) return;
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = isCritical ? 'sawtooth' : 'sine';
+    osc.frequency.setValueAtTime(isCritical ? 880 : 587.33, audioCtx.currentTime);
+    if(isCritical){
+      osc.frequency.setValueAtTime(440, audioCtx.currentTime + 0.12);
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.24);
+    }
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (isCritical ? 0.4 : 0.25));
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + (isCritical ? 0.45 : 0.3));
+  } catch(e){ /* audio policy fallback */ }
+}
+
+function toggleAudio(){
+  audioEnabled = !audioEnabled;
+  document.getElementById('audio-toggle-btn').textContent = audioEnabled ? '🔊 Sound: ON' : '🔇 Sound: MUTED';
+}
+
+// ---------- Tabs ----------
+let currentActiveTab = 'dashboard';
+
+function showTab(tabName){
+  currentActiveTab = tabName;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tabName));
+  if(tabName === 'alerts') refreshAlerts(true);
+  if(tabName === 'analytics') refreshAnalytics(true);
+  if(tabName === 'history') refreshHistory(true);
+  if(tabName === 'security') refreshSecurityTab();
+  if(tabName === 'audit') refreshAuditLogs(true);
+}
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => showTab(btn.dataset.tab));
+});
+
+// ---------- RBAC: Current User Profile ----------
+async function refreshCurrentUser(){
+  try{
+    const res = await fetch('/api/auth/user');
+    currentUser = await res.json();
+    document.getElementById('user-display').textContent = currentUser.display_name;
+    const roleEl = document.getElementById('user-role');
+    roleEl.textContent = currentUser.role;
+    roleEl.className = 'badge ' + (currentUser.role === 'OFFICER' ? 'HIGH' : 'LOW');
+  } catch(e){}
+}
+
+async function toggleUserRole(){
+  const targetRole = currentUser.role === 'OFFICER' ? 'JAWAN' : 'OFFICER';
+  const res = await fetch('/api/auth/role', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ role: targetRole }),
+  });
+  currentUser = await res.json();
+  refreshCurrentUser();
+  refreshAuditLogs();
+}
+
+// ---------- Edge-to-Central Satellite Sync ----------
+async function refreshSyncStatus(){
+  try{
+    const res = await fetch('/api/sync/status');
+    const s = await res.json();
+    const pendingCount = (s.pending_events !== undefined) ? s.pending_events : ((s.unsynced_events_count !== undefined) ? s.unsynced_events_count : 0);
+    const badge = document.getElementById('sync-badge');
+    if(s.is_connected){
+      badge.textContent = `🛰️ HQ SYNC: CONNECTED`;
+      badge.className = 'badge ONLINE';
+    } else {
+      badge.textContent = `🛰️ HQ SYNC: OFFLINE (${pendingCount} QUEUED)`;
+      badge.className = 'badge MEDIUM';
+    }
+    document.getElementById('sync-summary-detail').textContent =
+      `Edge Queue: ${pendingCount} unsynced events buffered for satellite uplink (${s.is_connected ? 'uplink active' : 'simulated link down'}).`;
+  } catch(e){}
+}
+
+async function toggleSyncLink(){
+  await fetch('/api/sync/toggle', {method: 'POST'});
+  refreshSyncStatus();
+  refreshAuditLogs();
+}
+
+async function triggerSyncNow(){
+  const res = await fetch('/api/sync/now', {method: 'POST'});
+  const data = await res.json();
+  refreshSyncStatus();
+  refreshAuditLogs();
+}
+
+// ---------- Camera Tamper Emergency Popup & Banner ----------
+let activeTampers = {}; // camId -> { camera_id, tamper_type, reason, timestamp }
+let acknowledgedTamperKeys = new Set();
+let lastTamperedCamId = null;
+
+function triggerTamperPopup(camId, tamperType, reason){
+  if(!tamperType || tamperType === 'NONE') return;
+  const key = `${camId}:${tamperType}`;
+  lastTamperedCamId = camId;
+  activeTampers[camId] = {
+    camera_id: camId,
+    tamper_type: tamperType,
+    reason: reason || `Hardware sabotage / ${tamperType} detected`,
+    timestamp: new Date().toLocaleTimeString()
+  };
+
+  playThreatTone(true);
+  updateTamperBanner();
+
+  if(!acknowledgedTamperKeys.has(key)){
+    renderTamperModal(camId, tamperType, activeTampers[camId].reason);
+    const modal = document.getElementById('tamper-modal');
+    if(modal) modal.classList.add('open');
+  }
+}
+
+function updateTamperBanner(){
+  const banner = document.getElementById('tamper-banner');
+  const textEl = document.getElementById('tamper-banner-text');
+  if(!banner) return;
+  const camIds = Object.keys(activeTampers);
+  if(camIds.length > 0){
+    const summary = camIds.map(cid => `${cid} (${activeTampers[cid].tamper_type})`).join(', ');
+    if(textEl) textEl.textContent = `Immediate sentry response required: Optical sabotage detected on ${summary}.`;
+    banner.classList.add('active');
+  } else {
+    banner.classList.remove('active');
+  }
+}
+
+function dismissTamperBanner(){
+  const banner = document.getElementById('tamper-banner');
+  if(banner) banner.classList.remove('active');
+}
+
+function reopenTamperModal(){
+  const camIds = Object.keys(activeTampers);
+  const targetCam = lastTamperedCamId || camIds[0] || 'BOP-01';
+  const info = activeTampers[targetCam] || { tamper_type: 'OCCLUSION', reason: 'Lens obstruction detected' };
+  renderTamperModal(targetCam, info.tamper_type, info.reason);
+  const modal = document.getElementById('tamper-modal');
+  if(modal) modal.classList.add('open');
+}
+
+function renderTamperModal(camId, tamperType, reason){
+  const body = document.getElementById('tamper-modal-body');
+  if(!body) return;
+
+  let typeDescription = "";
+  let icon = "⚠️";
+  if(tamperType === 'OCCLUSION'){
+    typeDescription = "LENS OCCLUSION / COVERED (Cloth, spray paint, or physical obstruction blocking camera lens)";
+    icon = "🌑";
+  } else if(tamperType === 'BLINDING'){
+    typeDescription = "LENS BLINDING / SATURATION (High-intensity laser, spotlight, or extreme glare blinding sensor)";
+    icon = "☀️";
+  } else if(tamperType === 'DEFOCUS'){
+    typeDescription = "OPTICAL DEFOCUS / SABOTAGE (Lens turned out-of-focus or smeared with translucent liquid)";
+    icon = "🌫️";
+  } else {
+    typeDescription = `${tamperType} — Hardware sensor diagnostic anomaly`;
+  }
+
+  body.innerHTML = `
+    <div style="background:rgba(255,45,85,0.12); border:1px solid rgba(255,45,85,0.45); border-radius:6px; padding:14px; margin-bottom:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:14px; font-weight:bold; color:#ff4d6d; letter-spacing:0.04em;">
+          ${icon} SABOTAGE CLASSIFICATION: ${tamperType}
+        </span>
+        <span class="badge CRITICAL" style="font-size:12px; padding:3px 10px;">SEVERITY: CRITICAL</span>
+      </div>
+      <div style="font-size:12.5px; line-height:1.6; color:#eee;">
+        <div><strong>Sensor Unit:</strong> <span class="mono" style="color:var(--cyan); font-weight:bold; font-size:13px;">${camId}</span></div>
+        <div style="margin-top:4px;"><strong>Sabotage Pattern:</strong> ${typeDescription}</div>
+        <div style="margin-top:4px; font-size:12px; color:var(--dim);"><strong>Diagnostic Reason:</strong> ${reason || 'Camera tamper detector triggered'}</div>
+        <div style="margin-top:4px; font-size:12px; color:var(--dim);"><strong>Triggered At:</strong> ${new Date().toLocaleTimeString()} · Sector Log Committed</div>
+      </div>
+    </div>
+
+    <div style="position:relative; margin-bottom:14px; border:1px solid rgba(255,45,85,0.5); border-radius:6px; overflow:hidden; background:#000;">
+      <img src="/video_feed/${camId}?t=${Date.now()}" alt="${camId} feed" style="width:100%; height:200px; object-fit:cover; display:block;">
+      <div style="position:absolute; top:8px; left:8px; background:rgba(220,20,60,0.92); color:#fff; font-size:11px; font-weight:bold; padding:4px 9px; border-radius:3px; letter-spacing:0.06em;">
+        LIVE COMPROMISED SENSOR FEED
+      </div>
+      <div style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#bbb; font-size:11px; padding:3px 8px; border-radius:3px;">
+        Auto-Recording Evidence to Event Store
+      </div>
+    </div>
+
+    <div style="background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:12px; margin-bottom:16px;">
+      <div style="font-size:11.5px; font-weight:700; color:var(--accent); letter-spacing:0.08em; margin-bottom:6px;">MANDATORY BSF CIBMS TACTICAL PROTOCOL</div>
+      <ul style="margin:0; padding-left:18px; font-size:12px; line-height:1.6; color:var(--ink);">
+        <li>1. Dispatch nearest Sentry Post / Quick Reaction Team (QRF) to inspect tower mount at <strong class="mono">${camId}</strong>.</li>
+        <li>2. Reposition adjacent sector pan-tilt cameras to cover potential blind spot corridor.</li>
+        <li>3. Physical sabotage event permanently recorded to military compliance audit log.</li>
+      </ul>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+      <div style="display:flex; gap:8px;">
+        <button class="action-btn danger" onclick="acknowledgeTamperAlert('${camId}', '${tamperType}')" style="font-size:12.5px; padding:8px 16px; font-weight:bold;">
+          ✓ Acknowledge Alert
+        </button>
+        <button class="btn-ctrl" onclick="clearTamperState('${camId}')" style="font-size:12px; padding:8px 14px; border:1px solid var(--line); color:var(--cyan);">
+          🔄 Reset / Clear Sensor
+        </button>
+      </div>
+      <button class="btn-ctrl" onclick="inspectTamperedCamera('${camId}')" style="font-size:12px; padding:8px 14px;">
+        🔍 Camera Fullscreen Detail
+      </button>
+    </div>
+  `;
+}
+
+function closeTamperModal(){
+  const modal = document.getElementById('tamper-modal');
+  if(modal) modal.classList.remove('open');
+}
+
+function acknowledgeTamperAlert(camId, tamperType){
+  const key = `${camId}:${tamperType}`;
+  acknowledgedTamperKeys.add(key);
+  closeTamperModal();
+}
+
+async function clearTamperState(camId){
+  try{
+    await fetch(`/api/cameras/${camId}/tamper`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ type: null })
+    });
+  }catch(e){}
+  delete activeTampers[camId];
+  for(const k of Array.from(acknowledgedTamperKeys)){
+    if(k.startsWith(camId + ':')) acknowledgedTamperKeys.delete(k);
+  }
+  closeTamperModal();
+  updateTamperBanner();
+  await refreshStatus();
+  refreshAuditLogs();
+}
+
+function inspectTamperedCamera(camId){
+  closeTamperModal();
+  openCameraDetail(camId);
+}
+
+// ---------- Dashboard: status + summary cards ----------
+async function refreshStatus(){
+  try{
+    const res = await fetch('/api/status');
+    const data = await res.json();
+
+    let totalTracks = 0;
+    for(const [camId, s] of Object.entries(data)){
+      totalTracks += s.active_track_count || 0;
+
+      const statusEl = document.getElementById('status-' + camId);
+      if(statusEl){ statusEl.textContent = s.status; statusEl.className = 'badge ' + s.status; }
+      const fpsEl = document.getElementById('fps-' + camId);
+      if(fpsEl) fpsEl.textContent = (s.fps || 0).toFixed(1) + ' FPS';
+      const riskEl = document.getElementById('risk-' + camId);
+      if(riskEl){ riskEl.textContent = s.risk_level; riskEl.className = 'badge ' + (s.risk_level || 'LOW'); }
+      const countsEl = document.getElementById('counts-' + camId);
+      if(countsEl){
+        const entries = Object.entries(s.object_counts || {});
+        countsEl.textContent = entries.length ? entries.map(([k,v]) => `${k}: ${v}`).join('   ') : 'no objects detected';
+      }
+
+      const pauseBtn = document.getElementById('pause-btn-' + camId);
+      if(pauseBtn) pauseBtn.textContent = s.paused ? 'Resume' : 'Pause';
+      const powerBtn = document.getElementById('power-btn-' + camId);
+      if(powerBtn) powerBtn.textContent = (s.status === 'OFFLINE' && !s.paused) ? 'Start' : 'Stop';
+
+      // Visual feedback & alert popup for Camera Tamper / Anti-Sabotage
+      const isTampered = s.tamper && s.tamper.is_tampered;
+      const card = document.getElementById('card-' + camId);
+      if(card){
+        let overlay = document.getElementById('tamper-overlay-' + camId);
+        if(isTampered){
+          card.classList.add('tampered-card');
+          if(!overlay){
+            overlay = document.createElement('div');
+            overlay.className = 'tamper-feed-overlay';
+            overlay.id = 'tamper-overlay-' + camId;
+            const fw = card.querySelector('.feed-wrap');
+            if(fw) fw.appendChild(overlay);
+          }
+          overlay.textContent = `🚨 SENSOR TAMPERED: ${s.tamper.tamper_type}`;
+          triggerTamperPopup(camId, s.tamper.tamper_type, s.tamper.reason);
+        } else {
+          card.classList.remove('tampered-card');
+          if(overlay) overlay.remove();
+          if(activeTampers[camId]){
+            delete activeTampers[camId];
+            for(const k of Array.from(acknowledgedTamperKeys)){
+              if(k.startsWith(camId + ':')) acknowledgedTamperKeys.delete(k);
+            }
+            updateTamperBanner();
+          }
+        }
+      }
+    }
+    document.getElementById('summary-tracks').textContent = totalTracks;
+  } catch(e){}
+}
+
+async function toggleCameraPause(camId){
+  const pauseBtn = document.getElementById('pause-btn-' + camId);
+  const isPaused = pauseBtn && pauseBtn.textContent.trim() === 'Resume';
+  if(pauseBtn){
+    pauseBtn.disabled = true;
+    pauseBtn.textContent = isPaused ? 'Resuming...' : 'Pausing...';
+  }
+  try {
+    await fetch(`/api/cameras/${camId}/${isPaused ? 'resume' : 'pause'}`, {method: 'POST'});
+  } catch(e){}
+  await refreshStatus();
+  if(pauseBtn) pauseBtn.disabled = false;
+}
+
+async function toggleCameraPower(camId){
+  const powerBtn = document.getElementById('power-btn-' + camId);
+  const isStopped = powerBtn && powerBtn.textContent.trim() === 'Start';
+  if(powerBtn){
+    powerBtn.disabled = true;
+    powerBtn.textContent = isStopped ? 'Starting...' : 'Stopping...';
+  }
+  try {
+    await fetch(`/api/cameras/${camId}/${isStopped ? 'start' : 'stop'}`, {method: 'POST'});
+  } catch(e){}
+  await refreshStatus();
+  if(powerBtn) powerBtn.disabled = false;
+}
+
+async function simulateTamper(camId, type){
+  if(type){
+    triggerTamperPopup(camId, type, `Physical camera tampering triggered on ${camId}: ${type}`);
+  } else {
+    delete activeTampers[camId];
+    for(const k of Array.from(acknowledgedTamperKeys)){
+      if(k.startsWith(camId + ':')) acknowledgedTamperKeys.delete(k);
+    }
+    closeTamperModal();
+    updateTamperBanner();
+  }
+  await fetch(`/api/cameras/${camId}/tamper`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ type: type || null }),
+  });
+  refreshStatus();
+  refreshAuditLogs();
+}
+
+async function setGlobalConfidence(value){
+  document.getElementById('confidence-value').textContent = parseFloat(value).toFixed(2);
+  await fetch('/api/confidence', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({confidence: parseFloat(value)}),
+  });
+}
+
+async function refreshSystem(){
+  try{
+    const res = await fetch('/api/system');
+    const s = await res.json();
+    document.getElementById('summary-cameras').textContent = `${s.cameras_online}/${s.cameras_total}`;
+    const badge = document.getElementById('system-health-badge');
+    badge.textContent = 'SYSTEM: ' + s.health;
+    badge.className = 'badge ' + (s.health === 'GOOD' ? 'ONLINE' : (s.health === 'DEGRADED' ? 'RECONNECTING' : 'ERROR'));
+    document.getElementById('system-summary').textContent =
+      `${s.cameras_online}/${s.cameras_total} cameras online · ${s.total_events_recorded} events recorded`;
+
+    const activeAlerts = s.active_alerts || {};
+    const totalActive = (activeAlerts.LOW||0)+(activeAlerts.MEDIUM||0)+(activeAlerts.HIGH||0)+(activeAlerts.CRITICAL||0);
+    document.getElementById('summary-alerts').textContent = totalActive;
+    const critCount = activeAlerts.CRITICAL || 0;
+    document.getElementById('summary-critical').textContent = critCount;
+
+    const tabBadge = document.getElementById('alerts-tab-badge');
+    if(tabBadge){
+      tabBadge.textContent = totalActive;
+      tabBadge.style.display = totalActive > 0 ? 'inline-block' : 'none';
+      tabBadge.className = 'badge ' + (critCount > 0 ? 'CRITICAL' : 'HIGH');
+    }
+
+    const banner = document.getElementById('critical-banner');
+    if(critCount > 0){
+      banner.classList.add('active');
+    } else {
+      banner.classList.remove('active');
+    }
+  } catch(e){}
+}
+
+async function refreshEvents(){
+  try{
+    const res = await fetch('/api/events');
+    const events = await res.json();
+    const container = document.getElementById('events');
+    if(!events.length){ container.innerHTML = '<div class="empty-state">No events yet.</div>'; return; }
+
+    // Check for newly arriving critical/high threats for audio chime
+    for(const ev of events.slice(0, 5)){
+      if((ev.risk_level === 'CRITICAL' || ev.risk_level === 'HIGH') && ev.id && !lastSeenAlertIds.has(ev.id)){
+        lastSeenAlertIds.add(ev.id);
+        playThreatTone(ev.risk_level === 'CRITICAL');
+        break;
+      }
+    }
+
+    container.innerHTML = events.slice(0, 40).map(ev => {
+      const kind = ev.event_kind || 'EVENT';
+      let line = '';
+      if(kind === 'RISK'){
+        line = `${ev.risk_level} (score ${ev.risk_score||'--'}) — ${ev.object_type} on ${ev.camera_id}: ${(ev.reasons||[]).join('; ')}`;
+      } else if(kind === 'ZONE'){
+        line = `${ev.kind.replace('ZONE_','')} — ${ev.object_type} ${ev.track_id} in "${ev.zone}"` +
+               (ev.dwell_seconds ? ` (${ev.dwell_seconds}s)` : '');
+      } else if(kind === 'LINE'){
+        line = `${ev.object_type} ${ev.track_id} crossed '${ev.line}': ${ev.from_label} → ${ev.to_label}`;
+      } else if(kind === 'STATUS'){
+        line = `${ev.camera_id} is now ${ev.status}${ev.detail ? ' — ' + ev.detail : ''}`;
+      } else {
+        line = `${ev.object_type} detected on ${ev.camera_id} (${((ev.confidence||0)*100).toFixed(0)}%)`;
+      }
+      return `<div class="event ${kind}">
+                <div class="row1"><span>${ev.timestamp}</span><span>${kind}</span></div>
+                <div class="row2">${line}</div>
+              </div>`;
+    }).join('');
+  } catch(e){}
+}
+
+// ---------- Alerts Tab & Tactical Dossier ----------
+let lastAlertsSignature = '';
+
+async function refreshAlerts(force = false){
+  const statusEl = document.getElementById('alert-status-filter');
+  const severityEl = document.getElementById('alert-severity-filter');
+  const sortEl = document.getElementById('alert-sort');
+  if(!statusEl || !severityEl || !sortEl) return;
+
+  const status = statusEl.value;
+  const severity = severityEl.value;
+  const sort = sortEl.value;
+  const params = new URLSearchParams();
+  if(status) params.set('status', status);
+  if(severity) params.set('severity', severity);
+  params.set('sort', sort);
+
+  try{
+    const res = await fetch('/api/alerts?' + params.toString());
+    const alerts = await res.json();
+    const body = document.getElementById('alerts-body');
+    if(!body) return;
+
+    if(!alerts.length){ 
+      body.innerHTML = '<tr><td colspan="8" class="empty-state">No alerts match these filters.</td></tr>'; 
+      lastAlertsSignature = 'empty';
+      return; 
+    }
+
+    const signature = alerts.map(a => `${a.id}:${a.status}:${a.occurrences}:${a.last_seen}`).join('|');
+    if(!force && signature === lastAlertsSignature) {
+      return; // No change, skip DOM rebuild to prevent flicker
+    }
+    lastAlertsSignature = signature;
+
+    body.innerHTML = alerts.map(a => `
+      <tr>
+        <td class="mono">${new Date(a.last_seen*1000).toLocaleTimeString()}</td>
+        <td><span class="badge ${a.severity}">${a.severity}</span></td>
+        <td class="mono">${a.camera_id}</td>
+        <td class="mono">${a.track_id}</td>
+        <td class="mono">${a.event_type}</td>
+        <td>${a.description} ${a.occurrences > 1 ? `<span style="color:var(--dim)">(×${a.occurrences})</span>` : ''}</td>
+        <td><span class="badge ${a.status}">${a.status}</span></td>
+        <td>
+          ${a.status === 'ACTIVE' ? `<button class="action-btn" onclick="ackAlert('${a.id}', this)">Ack</button>` : ''}
+          ${a.status !== 'RESOLVED' && a.status !== 'FALSE_ALARM' ? `<button class="action-btn success" onclick="resolveAlert('${a.id}', this)">Resolve</button>` : ''}
+          ${a.status !== 'FALSE_ALARM' ? `<button class="action-btn danger" onclick="openFalseAlarmModal('${a.id}')">False Alarm</button>` : ''}
+          <button class="action-btn" onclick="openIncidentDossier('${a.id}')" style="color:var(--cyan); border-color:var(--cyan);">Dossier</button>
+        </td>
+      </tr>`).join('');
+  } catch(e){}
+}
+
+async function ackAlert(id, btn){
+  if(btn){ btn.disabled = true; btn.textContent = '...'; }
+  try {
+    await fetch(`/api/alerts/${id}/acknowledge`, {method:'POST'});
+  } catch(e){}
+  await refreshAlerts(true);
+  refreshAuditLogs();
+}
+async function resolveAlert(id, btn){
+  if(btn){ btn.disabled = true; btn.textContent = '...'; }
+  try {
+    await fetch(`/api/alerts/${id}/resolve`, {method:'POST'});
+  } catch(e){}
+  await refreshAlerts(true);
+  refreshAuditLogs();
+}
+
+function openFalseAlarmModal(alertId){
+  currentAlertForFalseAlarm = alertId;
+  document.getElementById('false-alarm-modal').classList.add('open');
+}
+function closeFalseAlarmModal(){
+  currentAlertForFalseAlarm = null;
+  document.getElementById('false-alarm-modal').classList.remove('open');
+}
+async function submitFalseAlarm(){
+  if(!currentAlertForFalseAlarm) return;
+  const notes = document.getElementById('fa-notes-input').value.trim();
+  await fetch(`/api/alerts/${currentAlertForFalseAlarm}/false_alarm`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ notes }),
+  });
+  closeFalseAlarmModal();
+  refreshAlerts();
+  refreshAuditLogs();
+}
+
+async function openIncidentDossier(alertId){
+  try{
+    const res = await fetch(`/api/incident/${alertId}/dossier`);
+    if(!res.ok) return;
+    const d = await res.json();
+    const a = d.alert;
+
+    document.getElementById('dossier-content').innerHTML = `
+      <div class="dossier-header">
+        <div>
+          <div style="font-size:11px; letter-spacing:0.08em; color:var(--accent); font-weight:700;">${d.classification}</div>
+          <h2 style="margin:4px 0 0; font-size:18px;">INCIDENT REPORT: ${d.dossier_id}</h2>
+          <div style="font-size:12px; color:var(--dim);">${d.sector} · Generated ${d.generated_at_iso}</div>
+        </div>
+        <div style="text-align:right;">
+          <span class="badge ${a.severity}" style="font-size:13px; padding:4px 12px;">THREAT: ${a.severity}</span>
+          <div style="font-size:11px; color:var(--dim); margin-top:4px;">Risk Score: ${a.risk_score || '--'}/100</div>
+        </div>
+      </div>
+
+      <div class="dossier-grid">
+        <div class="dossier-box">
+          <p class="panel-title">TARGET TELEMETRY</p>
+          <div style="font-size:12.5px; line-height:1.7;">
+            <div>Target Track ID: <span class="mono">${a.track_id}</span> (${a.object_type})</div>
+            <div>Camera/Post: <span class="mono">${a.camera_id}</span></div>
+            <div>Violation Type: <span class="mono">${a.event_type}</span></div>
+            <div>First Sighted: <span class="mono">${new Date(a.first_seen*1000).toLocaleTimeString()}</span></div>
+            <div>Last Observed: <span class="mono">${new Date(a.last_seen*1000).toLocaleTimeString()}</span> (×${a.occurrences})</div>
+            <div>Status: <span class="badge ${a.status}">${a.status}</span></div>
+          </div>
+        </div>
+
+        <div class="dossier-box">
+          <p class="panel-title">OPTICAL SENSOR STATE</p>
+          <div style="font-size:12.5px; line-height:1.7;">
+            <div>Feed Health: <span class="badge ${d.camera_telemetry.status}">${d.camera_telemetry.status}</span></div>
+            <div>Night Mode: ${d.camera_telemetry.night_mode ? (d.camera_telemetry.night_mode.is_night ? '🌙 Low-light active' : '☀️ Day illumination') : 'Standard'}</div>
+            <div>Lens Tamper: ${d.camera_telemetry.tamper_status && d.camera_telemetry.tamper_status.tampered ? '⚠️ TAMPERING DETECTED ('+d.camera_telemetry.tamper_status.type+')' : '✅ Lens clear / normal'}</div>
+            <div>Evidence File: ${a.evidence_path ? `<a href="/evidence/${a.evidence_path}" target="_blank" style="color:var(--cyan);">View Captured JPEG</a>` : 'Standard stream capture'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dossier-box" style="margin-top:14px;">
+        <p class="panel-title">STANDARD OPERATING PROCEDURE (SOP) DISPATCH CHECKLIST</p>
+        <div style="margin-top:8px;">
+          ${d.sop_checklist.map(step => `
+            <div class="sop-item">
+              <input type="checkbox" style="margin-top:2px;">
+              <span>${step}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="dossier-box" style="margin-top:14px;">
+        <p class="panel-title">INCIDENT CHRONOLOGY TIMELINE</p>
+        <div style="font-size:12px;">
+          ${d.timeline.map(ev => `
+            <div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid var(--line);">
+              <span class="mono" style="color:var(--dim);">${ev.timestamp_iso}</span>
+              <span class="mono">${ev.event_type}</span>
+              <span>${ev.description}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    const mdBtn = document.getElementById('dossier-export-md-btn');
+    if(mdBtn) mdBtn.href = `/api/incident/${alertId}/export?format=md`;
+    const jsonBtn = document.getElementById('dossier-export-json-btn');
+    if(jsonBtn) jsonBtn.href = `/api/incident/${alertId}/export?format=json`;
+
+    document.getElementById('dossier-modal').classList.add('open');
+  } catch(e){}
+}
+function closeDossierModal(){
+  document.getElementById('dossier-modal').classList.remove('open');
+}
+
+// ---------- Analytics tab ----------
+function renderBarChart(containerId, dataObj, colorClassFn){
+  const container = document.getElementById(containerId);
+  const entries = Object.entries(dataObj || {});
+  if(!entries.length){ container.innerHTML = '<div class="empty-state">No data recorded yet.</div>'; return; }
+  const max = Math.max(...entries.map(([,v]) => v), 1);
+  container.innerHTML = entries.map(([label, value]) => `
+    <div class="bar-row">
+      <div class="bar-label">${label}</div>
+      <div class="bar-track"><div class="bar-fill ${colorClassFn ? colorClassFn(label) : ''}" style="width:${(value/max*100).toFixed(0)}%"></div></div>
+      <div class="bar-count">${value}</div>
+    </div>`).join('');
+}
+
+let lastAnalyticsSignature = '';
+
+async function refreshAnalytics(force = false){
+  try{
+    const res = await fetch('/api/analytics');
+    const a = await res.json();
+    const sig = `${a.total_events}:${a.data_span_seconds}`;
+    if(!force && sig === lastAnalyticsSignature) return;
+    lastAnalyticsSignature = sig;
+
+    renderBarChart('chart-severity', a.by_severity, (l) => l);
+    renderBarChart('chart-camera', a.by_camera);
+    renderBarChart('chart-objects', a.object_counts);
+
+    const timeData = {};
+    (a.over_time || []).forEach(b => {
+      const label = new Date(b.bucket_start*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      timeData[label] = b.count;
+    });
+    renderBarChart('chart-time', timeData);
+
+    const zoneBody = document.getElementById('zone-stats-body');
+    const zones = a.zone_stats || [];
+    zoneBody.innerHTML = zones.length ? zones.map(z => `
+      <tr>
+        <td class="mono">${z.zone}</td><td>${z.entries||0}</td><td>${z.exits||0}</td>
+        <td>${z.violations||0}</td><td>${z.avg_dwell ? z.avg_dwell.toFixed(1) : '—'}</td>
+      </tr>`).join('') : '<tr><td colspan="5" class="empty-state">No zone data yet.</td></tr>';
+
+    const mins = (a.data_span_seconds/60).toFixed(1);
+    document.getElementById('analytics-note').textContent =
+      `${a.total_events} real events recorded, spanning ${mins} minute(s) of session surveillance.`;
+  } catch(e){}
+}
+
+// ---------- History tab ----------
+let lastHistorySignature = '';
+
+async function refreshHistory(force = false){
+  const cameraEl = document.getElementById('hist-camera-filter');
+  const severityEl = document.getElementById('hist-severity-filter');
+  const eventTypeEl = document.getElementById('hist-type-filter');
+  if(!cameraEl || !severityEl || !eventTypeEl) return;
+  const camera = cameraEl.value;
+  const severity = severityEl.value;
+  const eventType = eventTypeEl.value;
+  const params = new URLSearchParams();
+  if(camera) params.set('camera', camera);
+  if(severity) params.set('severity', severity);
+  if(eventType) params.set('event_type', eventType);
+
+  try{
+    const res = await fetch('/api/history?' + params.toString());
+    const rows = await res.json();
+    const body = document.getElementById('history-body');
+    if(!rows.length){ body.innerHTML = '<tr><td colspan="7" class="empty-state">No history matches these filters.</td></tr>'; return; }
+    const sig = rows.length ? `${rows.length}:${rows[0].id || rows[0].timestamp}` : 'empty';
+    if(!force && sig === lastHistorySignature) return;
+    lastHistorySignature = sig;
+
+    body.innerHTML = rows.map(r => `
+      <tr>
+        <td class="mono">${r.timestamp_iso}</td>
+        <td class="mono">${r.camera_id || '—'}</td>
+        <td class="mono">${r.track_id || '—'}</td>
+        <td class="mono">${r.zone || '—'}</td>
+        <td class="mono">${r.event_type}</td>
+        <td>${r.severity ? `<span class="badge ${r.severity}">${r.severity}</span>` : '—'}</td>
+        <td>${r.description || ''}</td>
+      </tr>`).join('');
+  } catch(e){}
+}
+
+// ---------- Security tab & Feature Toggles ----------
+async function toggleFeaturePipeline(feature, enabled){
+  const res = await fetch('/api/features/toggle', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ feature, enabled }),
+  });
+  refreshSecurityTab();
+  refreshAuditLogs();
+}
+
+let currentAnprMode = 'unique'; // 'unique' | 'raw'
+
+function toggleAnprViewMode() {
+  currentAnprMode = (currentAnprMode === 'unique') ? 'raw' : 'unique';
+  const btn = document.getElementById('anpr-mode-toggle-btn');
+  if (btn) btn.textContent = currentAnprMode === 'unique' ? 'Mode: Unique Plates' : 'Mode: All Raw Events';
+  const thead = document.getElementById('anpr-thead');
+  if (thead) {
+    thead.innerHTML = currentAnprMode === 'unique'
+      ? `<tr><th>Last Seen</th><th>Camera</th><th>Vehicle Track</th><th>Plate Read</th><th>Visit Frequency</th><th>Confidence</th><th>Evidence</th></tr>`
+      : `<tr><th>Time</th><th>Camera</th><th>Vehicle Track</th><th>Plate Read</th><th>Confidence</th><th>Evidence</th></tr>`;
+  }
+  refreshSecurityTab();
+}
+
+async function refreshSecurityTab(){
+  try{
+    const [anprRes, faceRes, nightRes] = await Promise.all([
+      fetch('/api/anpr'), fetch('/api/faces'), fetch('/api/night'),
+    ]);
+    const anpr = await anprRes.json();
+    const face = await faceRes.json();
+    const night = await nightRes.json();
+
+    document.getElementById('toggle-anpr').checked = !!anpr.enabled;
+    document.getElementById('toggle-face').checked = !!face.enabled;
+
+    const stateMap = {
+      'JK': 'Jammu & Kashmir', 'DL': 'Delhi', 'MH': 'Maharashtra', 'PB': 'Punjab',
+      'HR': 'Haryana', 'UP': 'Uttar Pradesh', 'RJ': 'Rajasthan', 'GJ': 'Gujarat',
+      'CH': 'Chandigarh', 'HP': 'Himachal Pradesh', 'UK': 'Uttarakhand', 'WB': 'West Bengal'
+    };
+    const anprBody = document.getElementById('anpr-body');
+    const repeatToggle = document.getElementById('anpr-repeat-only-toggle');
+    const repeatOnly = repeatToggle ? repeatToggle.checked : true;
+
+    const uniqueList = anpr.unique_plates || [];
+    const repeatPlates = uniqueList.filter(p => p.count >= 2);
+    const repeatCount = repeatPlates.length;
+    const totalCount = uniqueList.length;
+
+    if (currentAnprMode === 'unique') {
+      document.getElementById('anpr-summary').textContent = anpr.enabled
+        ? `Active — ${repeatOnly ? repeatCount : totalCount} unique plate(s) displayed (${repeatCount} repeat vehicle(s) seen ≥2 times)`
+        : 'ANPR pipeline is currently inactive.';
+
+      let displayList = repeatOnly ? repeatPlates : uniqueList;
+
+      anprBody.innerHTML = displayList.length ? displayList.map(p => {
+        const plate = p.plate_text || '—';
+        const conf = p.plate_confidence ? p.plate_confidence.toFixed(0) : '—';
+        const prefix = plate.length >= 2 ? plate.substring(0, 2).toUpperCase() : '';
+        const state = stateMap[prefix] || p.state_name || '';
+        const count = p.count || 1;
+        let freqBadge = '';
+        if (count === 1) {
+          freqBadge = `<span class="badge ONLINE" style="background:#132318; color:#34d399; border:1px solid #059669; font-size:11px;">1st Pass</span>`;
+        } else if (count === 2) {
+          freqBadge = `<span class="badge CRITICAL" style="background:#2d1515; color:#f87171; border:1px solid #dc2626; font-weight:700; font-size:11px;">🚨 SEEN TWICE (2x)</span>`;
+        } else {
+          freqBadge = `<span class="badge CRITICAL" style="background:#3d1111; color:#ef4444; border:1px solid #b91c1c; font-weight:700; font-size:11px;">🚨 REPEAT VISITOR (${count}x)</span>`;
+        }
+        return `
+          <tr>
+            <td class="mono">${p.latest_timestamp || '—'}</td>
+            <td class="mono">${p.camera_id || 'BOP-03'}</td>
+            <td class="mono">${p.track_id || '—'}</td>
+            <td>
+              <span class="badge ONLINE" style="font-family:'SFMono-Regular', Consolas, monospace; letter-spacing:1px; background:#112416; color:#4caf6d; border:1px solid #2d6639; font-size:12px;">${plate}</span>
+              ${state ? `<span style="font-size:11px; color:var(--dim); margin-left:6px;">(${state})</span>` : ''}
+            </td>
+            <td>${freqBadge}</td>
+            <td class="mono">
+              ${conf !== '—' ? `<span style="color:var(--low);">${conf}%</span>` : '—'}
+            </td>
+            <td>${p.evidence_path ? `<a href="/evidence/${p.evidence_path}" target="_blank" style="color:var(--cyan);">view</a>` : '—'}</td>
+          </tr>`;
+      }).join('') : `<tr><td colspan="7" class="empty-state">${repeatOnly ? 'No repeat vehicles seen ≥2 times yet.' : 'No ANPR reads yet.'}</td></tr>`;
+
+    } else {
+      // Raw event stream mode
+      document.getElementById('anpr-summary').textContent = anpr.enabled
+        ? `Active — Showing all ${anpr.recent_reads.length} raw plate event reads`
+        : 'ANPR pipeline is currently inactive.';
+
+      anprBody.innerHTML = anpr.recent_reads.length ? anpr.recent_reads.map(r => {
+        let plate = (r.extra && r.extra.plate_text) || '';
+        if (!plate || plate === '—') {
+          const m = (r.description || '').match(/plate read as '([^']+)'/);
+          plate = m ? m[1] : '—';
+        }
+        const conf = (r.extra && r.extra.plate_confidence) ? r.extra.plate_confidence.toFixed(0) : '—';
+        const prefix = plate.length >= 2 ? plate.substring(0, 2).toUpperCase() : '';
+        const state = stateMap[prefix] || (r.extra && r.extra.state_name) || '';
+        return `
+          <tr>
+            <td class="mono">${r.timestamp_iso}</td>
+            <td class="mono">${r.camera_id}</td>
+            <td class="mono">${r.track_id}</td>
+            <td>
+              <span class="badge ONLINE" style="font-family:'SFMono-Regular', Consolas, monospace; letter-spacing:1px; background:#112416; color:#4caf6d; border:1px solid #2d6639; font-size:12px;">${plate}</span>
+              ${state ? `<span style="font-size:11px; color:var(--dim); margin-left:6px;">(${state})</span>` : ''}
+            </td>
+            <td class="mono">
+              ${conf !== '—' ? `<span style="color:var(--low);">${conf}%</span>` : '—'}
+            </td>
+            <td>${r.extra && r.extra.evidence_path ? `<a href="/evidence/${r.extra.evidence_path}" target="_blank" style="color:var(--cyan);">view</a>` : '—'}</td>
+          </tr>`;
+      }).join('') : '<tr><td colspan="6" class="empty-state">No ANPR reads yet.</td></tr>';
+    }
+
+    document.getElementById('face-summary').textContent = face.enabled
+      ? `Active — Gallery: ${face.gallery_identities.length ? face.gallery_identities.join(', ') : '(empty)'}`
+      : 'Face recognition pipeline is currently inactive.';
+    const knownBody = document.getElementById('face-known-body');
+    knownBody.innerHTML = face.recent_known.length ? face.recent_known.map(r => `
+      <tr>
+        <td class="mono">${r.timestamp_iso}</td>
+        <td class="mono">${r.camera_id}</td>
+        <td class="mono">${r.track_id}</td>
+        <td class="mono">${(r.extra && r.extra.identity) || '—'}</td>
+        <td class="mono">${(r.extra && r.extra.recognition_confidence) ? r.extra.recognition_confidence.toFixed(2) : '—'}</td>
+        <td>${r.extra && r.extra.evidence_path ? `<a href="/evidence/${r.extra.evidence_path}" target="_blank" style="color:var(--cyan);">view</a>` : '—'}</td>
+      </tr>`).join('') : '<tr><td colspan="6" class="empty-state">No known-identity matches yet.</td></tr>';
+
+    const unknownBody = document.getElementById('face-unknown-body');
+    unknownBody.innerHTML = face.recent_unknown.length ? face.recent_unknown.slice(0,10).map(r => `
+      <tr>
+        <td class="mono">${r.timestamp_iso}</td>
+        <td class="mono">${r.camera_id}</td>
+        <td class="mono">${r.track_id}</td>
+        <td class="mono">${(r.extra && r.extra.recognition_confidence) ? r.extra.recognition_confidence.toFixed(2) : '—'}</td>
+      </tr>`).join('') : '<tr><td colspan="4" class="empty-state">No unknown-face events yet.</td></tr>';
+
+    const litCams = Object.entries(night.per_camera_luminance || {})
+      .map(([cam, s]) => s ? `${cam}: ${s.is_night ? '🌙 NIGHT' : '☀️ day'} (${Math.round(s.smoothed_luminance ?? 0)}/255)` : `${cam}: —`)
+      .join(' · ');
+    document.getElementById('night-summary').textContent = litCams || 'No camera luminance data yet.';
+    const nightBody = document.getElementById('night-body');
+    nightBody.innerHTML = night.recent_night_movement_events.length ? night.recent_night_movement_events.map(r => `
+      <tr>
+        <td class="mono">${r.timestamp_iso}</td>
+        <td class="mono">${r.camera_id}</td>
+        <td class="mono">${r.track_id || '—'}</td>
+        <td class="mono">${r.zone || '—'}</td>
+        <td>${r.severity ? `<span class="badge ${r.severity}">${r.severity}</span>` : '—'}</td>
+        <td>${r.description || ''}</td>
+      </tr>`).join('') : '<tr><td colspan="6" class="empty-state">No night-movement events yet.</td></tr>';
+  } catch(e){}
+}
+
+// ---------- Audit Logs Tab ----------
+let lastAuditLogsSignature = '';
+
+async function refreshAuditLogs(force = false){
+  try{
+    const res = await fetch('/api/audit/logs');
+    const logs = await res.json();
+    const body = document.getElementById('audit-body');
+    if(!logs.length){ body.innerHTML = '<tr><td colspan="6" class="empty-state">No audit logs recorded yet.</td></tr>'; return; }
+    const sig = logs.length ? `${logs.length}:${logs[0].id || logs[0].timestamp || ''}:${logs[0].action || ''}` : 'empty';
+    if(!force && sig === lastAuditLogsSignature) return;
+    lastAuditLogsSignature = sig;
+    body.innerHTML = logs.map(l => `
+      <tr>
+        <td class="mono">${l.timestamp_iso}</td>
+        <td>${l.user}</td>
+        <td><span class="badge ${l.role === 'OFFICER' ? 'HIGH' : 'LOW'}">${l.role}</span></td>
+        <td class="mono">${l.action}</td>
+        <td class="mono">${l.target || '—'}</td>
+        <td>${l.details || ''}</td>
+      </tr>`).join('');
+  } catch(e){}
+}
+
+// ---------- Camera Detail Modal ----------
+async function openCameraDetail(camId){
+  currentModalCamera = camId;
+  document.getElementById('modal-title').textContent = camId + ' · Detail Surveillance Stream';
+  document.getElementById('modal-feed').src = '/video_feed/' + camId;
+  document.getElementById('camera-modal').classList.add('open');
+  await refreshModalDetail();
+}
+function closeCameraDetail(){
+  currentModalCamera = null;
+  document.getElementById('camera-modal').classList.remove('open');
+  document.getElementById('modal-feed').src = '';
+}
+async function refreshModalDetail(){
+  if(!currentModalCamera) return;
+  try{
+    const [statusRes, heatmapRes, alertsRes] = await Promise.all([
+      fetch('/api/status'), fetch('/api/heatmap/' + currentModalCamera),
+      fetch('/api/alerts?camera=' + currentModalCamera + '&status=ACTIVE&limit=8'),
+    ]);
+    const status = (await statusRes.json())[currentModalCamera] || {};
+    const heatmap = await heatmapRes.json();
+    const alerts = await alertsRes.json();
+
+    document.getElementById('modal-status').innerHTML = `
+      <div>Status: <span class="badge ${status.status}">${status.status}</span></div>
+      <div>FPS: ${(status.fps||0).toFixed(1)}</div>
+      <div>Active tracks: ${status.active_track_count||0}</div>
+      <div>Risk: <span class="badge ${status.risk_level}">${status.risk_level}</span></div>
+      <div>Active zones: ${(status.active_zones||[]).join(', ') || 'none'}</div>
+      <div>Latency: ${status.health ? status.health.processing_latency_ms.toFixed(1) : '--'} ms</div>
+      <div>Reconnects: ${status.health ? status.health.reconnect_attempts : '--'}</div>
+      <div>Frame failures: ${status.health ? status.health.frame_failures : '--'}</div>
+    `;
+
+    document.getElementById('modal-alerts').innerHTML = alerts.length
+      ? alerts.map(a => `<div><span class="badge ${a.severity}">${a.severity}</span> ${a.description}</div>`).join('')
+      : '<div class="empty-state">No active alerts for this camera.</div>';
+
+    const grid = document.getElementById('modal-heatmap');
+    grid.style.gridTemplateColumns = `repeat(${heatmap.cols}, 1fr)`;
+    const flat = heatmap.grid.flat();
+    const max = Math.max(...flat, 1);
+    grid.innerHTML = flat.map(v => {
+      const intensity = v / max;
+      const color = intensity === 0 ? '#0d1117' : `rgba(79,193,224,${(0.15 + intensity*0.85).toFixed(2)})`;
+      return `<div class="heatmap-cell" style="background:${color}"></div>`;
+    }).join('');
+  } catch(e){}
+}
+
+// ---------- Zone & Line Interactive Calibration Studio ----------
+let calibPoints = [];
+let calibBackgroundImage = new Image();
+let calibCanvas, calibCtx;
+
+function openCalibrationModal(camId){
+  if(currentUser.role !== 'OFFICER'){
+    alert('Permission Denied: Zone and Line Calibration requires OFFICER authorization.');
+    return;
+  }
+  document.getElementById('calib-camera-select').value = camId;
+  document.getElementById('calibration-modal').classList.add('open');
+  calibCanvas = document.getElementById('calib-canvas');
+  calibCtx = calibCanvas.getContext('2d');
+  calibPoints = [];
+  loadCalibrationSnapshot();
+
+  calibCanvas.onmousedown = function(e){
+    const rect = calibCanvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    calibPoints.push([parseFloat(x.toFixed(4)), parseFloat(y.toFixed(4))]);
+    renderCalibCanvas();
+  };
+}
+
+function closeCalibrationModal(){
+  document.getElementById('calibration-modal').classList.remove('open');
+}
+
+function changeCalibTool(){
+  calibPoints = [];
+  renderCalibCanvas();
+}
+
+function undoCalibPoint(){
+  if(calibPoints.length) calibPoints.pop();
+  renderCalibCanvas();
+}
+
+function clearCalibPoints(){
+  calibPoints = [];
+  renderCalibCanvas();
+}
+
+function loadCalibrationSnapshot(){
+  const camId = document.getElementById('calib-camera-select').value;
+  calibBackgroundImage.crossOrigin = "anonymous";
+  calibBackgroundImage.src = `/api/snapshot/${camId}?t=${Date.now()}`;
+  calibBackgroundImage.onload = function(){
+    renderCalibCanvas();
+  };
+}
+
+function renderCalibCanvas(){
+  if(!calibCtx) return;
+  const w = calibCanvas.width;
+  const h = calibCanvas.height;
+
+  if(calibBackgroundImage.complete && calibBackgroundImage.naturalWidth > 0){
+    calibCtx.drawImage(calibBackgroundImage, 0, 0, w, h);
+  } else {
+    calibCtx.fillStyle = "#111";
+    calibCtx.fillRect(0, 0, w, h);
+  }
+
+  const tool = document.getElementById('calib-tool-select').value;
+  if(!calibPoints.length) return;
+
+  calibCtx.lineWidth = 2;
+  if(tool === 'polygon'){
+    calibCtx.strokeStyle = "#4fc1e0";
+    calibCtx.fillStyle = "rgba(79, 193, 224, 0.25)";
+    calibCtx.beginPath();
+    calibCtx.moveTo(calibPoints[0][0] * w, calibPoints[0][1] * h);
+    for(let i = 1; i < calibPoints.length; i++){
+      calibCtx.lineTo(calibPoints[i][0] * w, calibPoints[i][1] * h);
+    }
+    if(calibPoints.length > 2){
+      calibCtx.closePath();
+      calibCtx.fill();
+    }
+    calibCtx.stroke();
+  } else {
+    calibCtx.strokeStyle = "#e8a33d";
+    calibCtx.beginPath();
+    calibCtx.moveTo(calibPoints[0][0] * w, calibPoints[0][1] * h);
+    if(calibPoints.length > 1){
+      calibCtx.lineTo(calibPoints[1][0] * w, calibPoints[1][1] * h);
+    }
+    calibCtx.stroke();
+  }
+
+  // Draw point markers
+  for(let i = 0; i < calibPoints.length; i++){
+    const px = calibPoints[i][0] * w;
+    const py = calibPoints[i][1] * h;
+    calibCtx.fillStyle = "#fff";
+    calibCtx.beginPath();
+    calibCtx.arc(px, py, 5, 0, Math.PI * 2);
+    calibCtx.fill();
+    calibCtx.fillStyle = "#000";
+    calibCtx.font = "10px sans-serif";
+    calibCtx.fillText((i+1).toString(), px - 3, py + 3);
+  }
+}
+
+async function saveCalibration(){
+  const camId = document.getElementById('calib-camera-select').value;
+  const tool = document.getElementById('calib-tool-select').value;
+  const name = document.getElementById('calib-name-input').value.trim() || 'custom_zone';
+  const severity = document.getElementById('calib-severity-select').value;
+
+  if(tool === 'polygon'){
+    if(calibPoints.length < 3){
+      alert('A polygon zone requires at least 3 points.');
+      return;
+    }
+    const zoneItem = {
+      name: name,
+      type: severity === 'HIGH' || severity === 'CRITICAL' ? 'restricted' : 'monitored',
+      severity: severity,
+      max_dwell_seconds: 5,
+      max_objects: 3,
+      polygon: calibPoints,
+    };
+    const res = await fetch('/api/config/zones', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ camera_id: camId, zones: [zoneItem] }),
+    });
+    if(res.ok){
+      document.getElementById('calib-status-msg').textContent = `✅ Successfully saved and applied restricted zone '${name}' live to ${camId}!`;
+      refreshAuditLogs();
+    }
+  } else {
+    if(calibPoints.length < 2){
+      alert('A virtual crossing line requires 2 points.');
+      return;
+    }
+    const lineItem = {
+      name: name,
+      point_a: calibPoints[0],
+      point_b: calibPoints[1],
+      side_a_label: "APPROACH SIDE",
+      side_b_label: "RESTRICTED SIDE"
+    };
+    const res = await fetch('/api/config/lines', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ camera_id: camId, lines: [lineItem] }),
+    });
+    if(res.ok){
+      document.getElementById('calib-status-msg').textContent = `✅ Successfully saved and applied crossing line '${name}' live to ${camId}!`;
+      refreshAuditLogs();
+    }
+  }
+}
+
+// ---------- Server-Sent Events (Real-Time Push with Smart Debouncing) ----------
+let sseDebounceTimer = null;
+function scheduleDebouncedRefresh(){
+  if(sseDebounceTimer) return;
+  sseDebounceTimer = setTimeout(() => {
+    sseDebounceTimer = null;
+    refreshSystem();
+    refreshStatus();
+    if(currentActiveTab === 'alerts') refreshAlerts();
+    else if(currentActiveTab === 'security') refreshSecurityTab();
+    else if(currentActiveTab === 'audit') refreshAuditLogs();
+  }, 1000);
+}
+
+function initSSE(){
+  if(!window.EventSource) return;
+  try{
+    const evtSource = new EventSource('/api/stream');
+    evtSource.onmessage = function(e){
+      try{
+        const ev = JSON.parse(e.data);
+        if(!ev || ev.type === 'CONNECTED') return;
+
+        // Check for newly arriving critical/high threats for audio chime
+        if((ev.risk_level === 'CRITICAL' || ev.risk_level === 'HIGH') && ev.id && !lastSeenAlertIds.has(ev.id)){
+          lastSeenAlertIds.add(ev.id);
+          playThreatTone(ev.risk_level === 'CRITICAL');
+        }
+
+        // Real-time camera hardware tamper popup
+        if((ev.event_kind === 'TAMPER' || ev.event_type === 'CAMERA_TAMPERED') && ev.camera_id){
+          triggerTamperPopup(ev.camera_id, ev.tamper_type || 'OCCLUSION', ev.reason);
+        }
+
+        // Prepend directly to event feed in memory (instant zero-latency DOM render, no network call)
+        const container = document.getElementById('events');
+        if(container){
+          const empty = container.querySelector('.empty-state');
+          if(empty) empty.remove();
+          const kind = ev.event_kind || 'EVENT';
+          let line = '';
+          if(kind === 'RISK'){
+            line = `${ev.risk_level} (score ${ev.risk_score||'--'}) — ${ev.object_type} on ${ev.camera_id}: ${(ev.reasons||[]).join('; ')}`;
+          } else if(kind === 'ZONE'){
+            line = `${(ev.kind||'').replace('ZONE_','')} — ${ev.object_type} ${ev.track_id} in "${ev.zone}"` +
+                   (ev.dwell_seconds ? ` (${ev.dwell_seconds}s)` : '');
+          } else if(kind === 'LINE'){
+            line = `${ev.object_type} ${ev.track_id} crossed '${ev.line}': ${ev.from_label} → ${ev.to_label}`;
+          } else if(kind === 'STATUS'){
+            line = `${ev.camera_id} is now ${ev.status}${ev.detail ? ' — ' + ev.detail : ''}`;
+          } else if(kind === 'TAMPER'){
+            line = `🚨 CAMERA SENSOR TAMPER on ${ev.camera_id}: ${ev.tamper_type} (${ev.reason || ''})`;
+          } else {
+            line = `${ev.object_type || 'Object'} detected on ${ev.camera_id} (${((ev.confidence||0)*100).toFixed(0)}%)`;
+          }
+          const item = document.createElement('div');
+          item.className = `event ${kind}`;
+          item.innerHTML = `<div class="row1"><span>${ev.timestamp || new Date().toLocaleTimeString()}</span><span>${kind}</span></div>
+                            <div class="row2">${line}</div>`;
+          container.insertBefore(item, container.firstChild);
+          while(container.children.length > 50){
+            container.removeChild(container.lastChild);
+          }
+        }
+
+        // Schedule debounced batch sync for status counters & active tab
+        scheduleDebouncedRefresh();
+      }catch(err){}
+    };
+    evtSource.onerror = function(){
+      // EventSource auto-reconnects natively
+    };
+  }catch(err){}
+}
+
+// ---------- Polling Lifecycle (Heartbeat Fallback) ----------
+refreshCurrentUser();
+refreshSyncStatus();
+refreshStatus();
+refreshSystem();
+refreshEvents();
+refreshSecurityTab();
+refreshAuditLogs();
+refreshHistory(true);
+refreshAnalytics(true);
+initSSE();
+
+// Sane fallback polling intervals to guarantee connection headroom for instant operator actions
+setInterval(refreshStatus, 4000);
+setInterval(refreshSystem, 5000);
+setInterval(refreshSyncStatus, 8000);
+setInterval(() => {
+  if (currentActiveTab === 'alerts') {
+    refreshAlerts();
+  } else if (currentActiveTab === 'analytics') {
+    refreshAnalytics();
+  } else if (currentActiveTab === 'history') {
+    refreshHistory();
+  } else if (currentActiveTab === 'security') {
+    refreshSecurityTab();
+  } else if (currentActiveTab === 'audit') {
+    refreshAuditLogs();
+  }
+}, 5000);
+setInterval(() => { if(currentModalCamera) refreshModalDetail(); }, 3000);
+
+// ==================== FEATURE TEST CENTER CONTROLLER ====================
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function openFeatureTestCenter() {
+  const modal = document.getElementById('test-center-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    loadTestCenterInventory();
+  }
+}
+
+function closeFeatureTestCenter() {
+  const modal = document.getElementById('test-center-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  // Restore operational camera feeds in DOM if paused
+  document.querySelectorAll('#cameras .feed-wrap img').forEach(img => {
+    if (img.dataset.pausedSrc) {
+      img.src = img.dataset.pausedSrc;
+      delete img.dataset.pausedSrc;
+    }
+  });
+}
+
+let tcCurrentCategory = 'All';
+function filterTestCenter(category, el) {
+  tcCurrentCategory = category;
+  const pills = document.querySelectorAll('#tc-filters .tc-filter-pill');
+  pills.forEach(p => p.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  const cards = document.querySelectorAll('.tc-card');
+  cards.forEach(c => {
+    const cardCat = c.getAttribute('data-category');
+    if (category === 'All' || cardCat === category) {
+      c.style.display = 'flex';
+    } else {
+      c.style.display = 'none';
+    }
+  });
+}
+
+let cachedTcCapabilities = [];
+async function loadTestCenterInventory() {
+  const container = document.getElementById('tc-cards-container');
+  try {
+    const res = await fetch('/api/test-center/inventory');
+    if (!res.ok) throw new Error('Inventory fetch failed');
+    const data = await res.json();
+    cachedTcCapabilities = data.capabilities || [];
+
+    if (!cachedTcCapabilities.length) {
+      container.innerHTML = '<div class="empty-state">No capabilities registered in inventory.</div>';
+      return;
+    }
+
+    container.innerHTML = cachedTcCapabilities.map(cap => {
+      const isReady = cap.status === 'READY';
+      const badgeClass = isReady ? 'tc-badge-ready' : 'tc-badge-disabled';
+      const btnDisabled = !isReady ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '';
+      
+      return `
+        <div class="tc-card" data-category="${escapeHtml(cap.category)}" id="tc-card-${cap.id}">
+          <div>
+            <div class="tc-card-header">
+              <span style="font-size:10.5px; font-weight:800; letter-spacing:0.05em; color:var(--cyan);">${escapeHtml(cap.id)}</span>
+              <span class="${badgeClass}">${escapeHtml(cap.status)}</span>
+            </div>
+            <div class="tc-card-title">${escapeHtml(cap.name)}</div>
+            <div class="tc-card-desc">${escapeHtml(cap.short_description)}</div>
+          </div>
+          <div>
+            <div style="font-size:10.5px; color:var(--dim); margin-bottom:8px; line-height:1.4;">
+              <div>Primary: <span class="mono" style="color:var(--cyan); font-weight:600;">${escapeHtml(cap.primary_camera)}</span></div>
+              <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(cap.demo_video_file)}">Source: <span class="mono" style="color:var(--ink);">${escapeHtml(cap.demo_video_file)}</span></div>
+              <div>Event: <span class="mono" style="color:#e8a33d;">${escapeHtml(cap.expected_event_type)}</span></div>
+            </div>
+            <div class="tc-card-footer">
+              <span style="font-size:10px; color:var(--dim); text-transform:uppercase;">${escapeHtml(cap.category)}</span>
+              <button class="action-btn" onclick="startDemoSession('${cap.id}')" ${btnDisabled} style="background:#092e27; border-color:#10b981; color:#34d399; font-weight:700; padding:5px 12px; font-size:11px;">
+                Launch Demo ▶
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (tcCurrentCategory !== 'All') {
+      filterTestCenter(tcCurrentCategory, null);
+    }
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state" style="color:var(--critical);">Failed to load inventory: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+let activeDemoPollingTimer = null;
+let activeDemoSessionStartTime = null;
+
+async function startDemoSession(featureId) {
+  try {
+    const res = await fetch('/api/test-center/start-demo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feature_id: featureId })
+    });
+    const data = await res.json();
+    if (!res.ok || data.status === 'ERROR') {
+      alert(`Could not start demo: ${data.detail || data.error || 'Unknown error'}`);
+      return;
+    }
+
+    // Hide hub modal without resetting normal feeds
+    const hubModal = document.getElementById('test-center-modal');
+    if (hubModal) hubModal.style.display = 'none';
+
+    // Pause normal operational camera feeds in DOM to prevent browser HTTP connection pool exhaustion (Chrome max 6 sockets)
+    document.querySelectorAll('#cameras .feed-wrap img').forEach(img => {
+      if (img.src && !img.dataset.pausedSrc) {
+        img.dataset.pausedSrc = img.src;
+        img.src = '';
+      }
+    });
+
+    // Show Demo Session Modal
+    const demoModal = document.getElementById('test-center-demo-modal');
+    if (demoModal) demoModal.style.display = 'flex';
+
+    // Populate Feature Info & Description Banner (Point 10)
+    const feat = data.feature || {};
+    document.getElementById('demo-feature-title').textContent = `${feat.name || featureId}`;
+    document.getElementById('demo-feature-desc-banner').innerHTML = `
+      <div style="font-weight:700; color:var(--cyan); margin-bottom:2px; font-size:11.5px;">CAPABILITY DESCRIPTION:</div>
+      <div>${escapeHtml(feat.short_description || 'Active AI pipeline verification.')}</div>
+      <div style="margin-top:4px; font-size:11px; color:var(--dim);">
+        Target Event Type: <span class="mono" style="color:#e8a33d;">${escapeHtml(feat.expected_event_type || 'ANY')}</span> &nbsp;|&nbsp;
+        Primary Test Camera: <span class="mono" style="color:var(--cyan); font-weight:700;">${escapeHtml(feat.primary_camera || 'DEMO-01')}</span>
+      </div>
+    `;
+
+    // Highlight Primary Camera feed box
+    ['01', '02', '03'].forEach(idx => {
+      const camId = `DEMO-${idx}`;
+      const box = document.getElementById(`demo-box-${idx}`);
+      const tag = document.getElementById(`demo-tag-${idx}`);
+      if (feat.primary_camera === camId) {
+        box.classList.add('primary');
+        tag.classList.add('primary');
+        tag.textContent = `${camId} (PRIMARY TARGET)`;
+      } else {
+        box.classList.remove('primary');
+        tag.classList.remove('primary');
+        tag.textContent = `${camId} (AUXILIARY SECTOR)`;
+      }
+    });
+
+    // Mount Isolated Demo Video Streams with cache buster
+    const cacheBuster = Date.now();
+    document.getElementById('demo-feed-01').src = `/demo_feed/DEMO-01?t=${cacheBuster}`;
+    document.getElementById('demo-feed-02').src = `/demo_feed/DEMO-02?t=${cacheBuster}`;
+    document.getElementById('demo-feed-03').src = `/demo_feed/DEMO-03?t=${cacheBuster}`;
+
+    // Start Telemetry & Event Polling
+    activeDemoSessionStartTime = Date.now();
+    if (activeDemoPollingTimer) clearInterval(activeDemoPollingTimer);
+    activeDemoPollingTimer = setInterval(pollActiveDemoSession, 1000);
+    pollActiveDemoSession();
+
+  } catch (err) {
+    alert(`Failed to initialize demo session: ${err.message}`);
+  }
+}
+
+async function pollActiveDemoSession() {
+  if (activeDemoSessionStartTime) {
+    const elapsed = ((Date.now() - activeDemoSessionStartTime) / 1000).toFixed(1);
+    const elSpan = document.getElementById('demo-session-elapsed');
+    if (elSpan) elSpan.textContent = `${elapsed}s`;
+  }
+
+  try {
+    const [sessRes, eventsRes] = await Promise.all([
+      fetch('/api/test-center/session'),
+      fetch('/api/test-center/events')
+    ]);
+
+    if (sessRes.ok) {
+      const sessData = await sessRes.json();
+      renderDemoTelemetry(sessData);
+    }
+
+    if (eventsRes.ok) {
+      const eventsData = await eventsRes.json();
+      renderDemoEvents(eventsData.events || []);
+    }
+  } catch (e) {
+    console.warn("Demo poll error:", e);
+  }
+}
+
+function renderDemoTelemetry(sessData) {
+  const container = document.getElementById('demo-telemetry-content');
+  if (!container) return;
+
+  if (!sessData.active_session) {
+    container.innerHTML = `<div class="empty-state">No demo session currently active.</div>`;
+    return;
+  }
+
+  const feat = sessData.feature || {};
+  const status = sessData.worker_status || {};
+  const cams = Object.keys(status);
+
+  let camRows = cams.map(cid => {
+    const s = status[cid] || {};
+    const fps = (s.fps || 0).toFixed(1);
+    const objCount = s.object_count || 0;
+    const isOnline = s.status === 'RUNNING';
+    const stCol = isOnline ? '#34d399' : '#f87171';
+    const isPrimary = cid === feat.primary_camera;
+    const priBadge = isPrimary ? `<span style="background:var(--cyan); color:#000; font-size:9.5px; font-weight:800; padding:1px 4px; border-radius:2px; margin-left:4px;">TARGET</span>` : '';
+
+    return `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.04);">
+        <span class="mono" style="font-weight:700; color:var(--ink);">${cid}${priBadge}</span>
+        <span style="color:${stCol}; font-size:11px;">● ${s.status}</span>
+        <span class="mono" style="color:var(--dim); font-size:11px;">${fps} FPS</span>
+        <span class="mono" style="color:var(--cyan); font-size:11px;">${objCount} objs</span>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="margin-bottom:10px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+        <span style="color:var(--dim);">Session ID:</span>
+        <span class="mono" style="color:var(--ink);">${escapeHtml(sessData.session_id)}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+        <span style="color:var(--dim);">Feature Under Test:</span>
+        <span class="mono" style="color:var(--cyan); font-weight:700;">${escapeHtml(feat.name)}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+        <span style="color:var(--dim);">Target Event Criteria:</span>
+        <span class="mono" style="color:#e8a33d;">${escapeHtml(feat.expected_event_type)}</span>
+      </div>
+    </div>
+    <div style="font-size:11px; font-weight:700; color:var(--dim); margin:8px 0 4px; letter-spacing:0.05em;">ISOLATED WORKER STATUS</div>
+    ${camRows}
+  `;
+}
+
+function renderDemoEvents(events) {
+  const container = document.getElementById('demo-events-list');
+  const countEl = document.getElementById('demo-event-count');
+  if (!container) return;
+
+  if (countEl) countEl.textContent = `${events.length} event${events.length === 1 ? '' : 's'}`;
+
+  if (!events.length) {
+    container.innerHTML = `<div class="empty-state">Observing live stream for matching feature events...</div>`;
+    return;
+  }
+
+  container.innerHTML = events.slice(0, 40).map(ev => {
+    const sev = ev.severity || ev.risk_level || 'INFO';
+    let sevColor = '#38bdf8';
+    if (sev === 'CRITICAL') sevColor = '#f43f5e';
+    else if (sev === 'HIGH') sevColor = '#fb923c';
+    else if (sev === 'MEDIUM') sevColor = '#facc15';
+
+    const evKind = ev.event_kind || ev.event_type || 'EVENT';
+    const summary = ev.summary || ev.detail || (ev.reasons ? ev.reasons.join(', ') : `${ev.object_type || 'Entity'} detected`);
+
+    return `
+      <div style="background:#090d14; border:1px solid rgba(255,255,255,0.06); border-left:3px solid ${sevColor}; padding:6px 10px; margin-bottom:6px; border-radius:3px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; margin-bottom:2px;">
+          <span class="mono" style="color:var(--dim);">${escapeHtml(ev.timestamp || '')}</span>
+          <span style="color:${sevColor}; font-weight:700; font-size:10px;">${escapeHtml(sev)}</span>
+        </div>
+        <div style="font-size:11.5px; color:var(--ink); font-weight:600;">
+          [${escapeHtml(ev.camera_id || 'DEMO')}] ${escapeHtml(evKind)}: ${escapeHtml(summary)}
+        </div>
+        ${ev.license_plate ? `<div style="font-size:10.5px; color:var(--cyan); margin-top:2px;">Plate: <span class="mono" style="background:#042b35; padding:1px 4px; border-radius:2px;">${escapeHtml(ev.license_plate)}</span></div>` : ''}
+        ${ev.person_name ? `<div style="font-size:10.5px; color:#a78bfa; margin-top:2px;">Identity: <span class="mono">${escapeHtml(ev.person_name)}</span> (${escapeHtml(ev.watchlist_status||'')})</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function exitDemoSession(returnToHub = false) {
+  // Clear feed streams immediately to release decoders & connections
+  ['01', '02', '03'].forEach(idx => {
+    const feed = document.getElementById(`demo-feed-${idx}`);
+    if (feed) feed.src = '';
+  });
+
+  if (activeDemoPollingTimer) {
+    clearInterval(activeDemoPollingTimer);
+    activeDemoPollingTimer = null;
+  }
+  activeDemoSessionStartTime = null;
+
+  const demoModal = document.getElementById('test-center-demo-modal');
+  if (demoModal) demoModal.style.display = 'none';
+
+  if (returnToHub) {
+    // Open hub IMMEDIATELY to avoid seeing the home screen!
+    openFeatureTestCenter();
+  } else {
+    // Returning to Normal Mode: restore the operational camera feeds in DOM
+    document.querySelectorAll('#cameras .feed-wrap img').forEach(img => {
+      if (img.dataset.pausedSrc) {
+        img.src = img.dataset.pausedSrc;
+        delete img.dataset.pausedSrc;
+      }
+    });
+  }
+
+  // Stop session on backend
+  try {
+    await fetch('/api/test-center/stop-demo', { method: 'POST' });
+  } catch (e) {
+    console.warn("Stop demo request failed:", e);
+  }
+}
+
+// Complete Demo Sequence Runner (Point 6: Bounded Sequence, max 8s per step)
+let completeDemoPollTimer = null;
+
+async function triggerCompleteDemoSequence() {
+  const panel = document.getElementById('tc-complete-demo-panel');
+  const cardsContainer = document.getElementById('tc-cards-container');
+  const progressTitle = document.getElementById('tc-complete-progress-title');
+  const btn = document.getElementById('btn-complete-demo');
+
+  if (btn) btn.disabled = true;
+  if (panel) panel.style.display = 'block';
+  if (cardsContainer) cardsContainer.style.display = 'none';
+  if (progressTitle) progressTitle.textContent = 'Starting automated bounded test sequence across 14 capabilities...';
+
+  try {
+    const res = await fetch('/api/test-center/complete-demo/start', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.status === 'ERROR') {
+      alert(`Could not start complete sequence: ${data.detail || 'Error'}`);
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    if (completeDemoPollTimer) clearInterval(completeDemoPollTimer);
+    completeDemoPollTimer = setInterval(pollCompleteDemoStatus, 800);
+    pollCompleteDemoStatus();
+
+  } catch (err) {
+    alert(`Complete demo sequence error: ${err.message}`);
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function pollCompleteDemoStatus() {
+  const progressTitle = document.getElementById('tc-complete-progress-title');
+  const tableContainer = document.getElementById('tc-complete-demo-table');
+  const btn = document.getElementById('btn-complete-demo');
+
+  try {
+    const res = await fetch('/api/test-center/complete-demo/status');
+    if (!res.ok) return;
+    const st = await res.json();
+
+    const steps = st.steps || [];
+    const currentIdx = st.current_step_index || 0;
+    const total = st.total_steps || steps.length;
+    const status = st.status || 'IDLE';
+
+    if (progressTitle) {
+      if (status === 'RUNNING') {
+        const curName = steps[currentIdx] ? steps[currentIdx].name : '';
+        progressTitle.innerHTML = `Running Step ${currentIdx + 1} of ${total}: <strong style="color:var(--cyan);">${escapeHtml(curName)}</strong> <span style="font-size:11px; opacity:0.8;">(auto-advancing up to 8s)</span>`;
+      } else if (status === 'COMPLETED') {
+        progressTitle.innerHTML = `<span style="color:#34d399; font-weight:800;">✓ Complete Demo Finished</span> (${st.verified_count || 0}/${total} verified live, ${st.timed_out_count || 0} timed out)`;
+        if (btn) btn.disabled = false;
+        clearInterval(completeDemoPollTimer);
+        completeDemoPollTimer = null;
+      } else if (status === 'STOPPED') {
+        progressTitle.textContent = `Sequence stopped by user.`;
+        if (btn) btn.disabled = false;
+        clearInterval(completeDemoPollTimer);
+        completeDemoPollTimer = null;
+      }
+    }
+
+    if (tableContainer && steps.length) {
+      tableContainer.innerHTML = `
+        <table style="width:100%; border-collapse:collapse; margin-top:8px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--line); color:var(--dim); font-size:10.5px; text-align:left;">
+              <th style="padding:4px 6px;">#</th>
+              <th style="padding:4px 6px;">FEATURE</th>
+              <th style="padding:4px 6px;">CAMERA</th>
+              <th style="padding:4px 6px;">TARGET EVENT</th>
+              <th style="padding:4px 6px;">ELAPSED</th>
+              <th style="padding:4px 6px;">OUTCOME</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${steps.map((s, idx) => {
+              let outCol = '#888';
+              let badgeText = s.outcome || 'PENDING';
+              if (s.outcome === 'VERIFIED') {
+                outCol = '#34d399';
+                badgeText = `✓ VERIFIED (${s.event_count || 1} ev)`;
+              } else if (s.outcome === 'TIMED_OUT') {
+                outCol = '#fbbf24';
+                badgeText = '⏱ TIMED OUT (Clean Advance)';
+              } else if (s.outcome === 'RUNNING') {
+                outCol = 'var(--cyan)';
+                badgeText = '▶ RUNNING...';
+              }
+
+              const rowBg = idx === currentIdx && status === 'RUNNING' ? 'rgba(0,229,255,0.08)' : 'transparent';
+
+              return `
+                <tr style="background:${rowBg}; border-bottom:1px solid rgba(255,255,255,0.03); font-size:11px;">
+                  <td style="padding:4px 6px;" class="mono">${idx + 1}</td>
+                  <td style="padding:4px 6px; font-weight:600; color:var(--ink);">${escapeHtml(s.name)}</td>
+                  <td style="padding:4px 6px;" class="mono">${escapeHtml(s.camera_id)}</td>
+                  <td style="padding:4px 6px;" class="mono" style="color:#e8a33d;">${escapeHtml(s.expected_event)}</td>
+                  <td style="padding:4px 6px;" class="mono">${s.duration ? s.duration.toFixed(1) + 's' : '--'}</td>
+                  <td style="padding:4px 6px; font-weight:700; color:${outCol};">${badgeText}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+  } catch (e) {
+    console.warn("Poll complete demo status error:", e);
+  }
+}
+
+async function stopDemoSession() {
+  try {
+    await fetch('/api/test-center/complete-demo/stop', { method: 'POST' });
+  } catch (e) {
+    console.warn("Stop complete demo request failed:", e);
+  }
+  if (completeDemoPollTimer) {
+    clearInterval(completeDemoPollTimer);
+    completeDemoPollTimer = null;
+  }
+  const panel = document.getElementById('tc-complete-demo-panel');
+  const cardsContainer = document.getElementById('tc-cards-container');
+  const btn = document.getElementById('btn-complete-demo');
+  if (panel) panel.style.display = 'none';
+  if (cardsContainer) cardsContainer.style.display = 'grid';
+  if (btn) btn.disabled = false;
+}
+</script>
+
+</body>
+</html>

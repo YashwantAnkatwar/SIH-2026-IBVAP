@@ -1,0 +1,191 @@
+{
+    "_comment": "Polygon coordinates are NORMALIZED (0.0-1.0) so the same layout scales to any camera resolution. 'default' applies to any camera not explicitly listed below. 'type' controls risk_engine.py behaviour: 'restricted' zones trigger risk escalation, 'monitored' zones are logged but not inherently risky. 'allowed_classes', if set, marks any other class found in the zone as a violation (e.g. a vehicle entering a pedestrian-only lane, or a pedestrian in a vehicle barrier zone). 'max_dwell_seconds', if set, causes a LOITERING/EXTENDED_DWELL event once a track has remained in the zone that long. 'max_objects', if set, causes an UNAUTHORIZED_ZONE_ENTRY/GROUP_INCURSION event once that many distinct tracks are in the zone at once. 'severity' is the zone's own baseline severity label (LOW/MEDIUM/HIGH) used purely for display/explanation.",
+    "default": [
+        {
+            "name": "restricted_zone",
+            "type": "restricted",
+            "severity": "HIGH",
+            "max_dwell_seconds": 5,
+            "max_objects": 3,
+            "polygon": [
+                [
+                    0.55,
+                    0.0
+                ],
+                [
+                    1.0,
+                    0.0
+                ],
+                [
+                    1.0,
+                    1.0
+                ],
+                [
+                    0.55,
+                    1.0
+                ]
+            ]
+        },
+        {
+            "name": "pedestrian_lane",
+            "type": "monitored",
+            "severity": "LOW",
+            "polygon": [
+                [
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.55,
+                    0.0
+                ],
+                [
+                    0.55,
+                    1.0
+                ],
+                [
+                    0.0,
+                    1.0
+                ]
+            ],
+            "allowed_classes": [
+                "person"
+            ]
+        }
+    ],
+    "BOP-01": [
+        {
+            "name": "zero_line_restricted",
+            "type": "restricted",
+            "severity": "HIGH",
+            "max_dwell_seconds": 5,
+            "max_objects": 3,
+            "polygon": [
+                [0.60, 0.0],
+                [1.0, 0.0],
+                [1.0, 1.0],
+                [0.60, 1.0]
+            ]
+        },
+        {
+            "name": "buffer_patrol_corridor",
+            "type": "monitored",
+            "severity": "LOW",
+            "polygon": [
+                [0.0, 0.0],
+                [0.60, 0.0],
+                [0.60, 1.0],
+                [0.0, 1.0]
+            ],
+            "allowed_classes": [
+                "person"
+            ]
+        }
+    ],
+    "BOP-02": [
+        {
+            "name": "dark_sector_boundary",
+            "type": "restricted",
+            "severity": "HIGH",
+            "max_dwell_seconds": 5,
+            "max_objects": 2,
+            "polygon": [
+                [
+                    0.5,
+                    0.0
+                ],
+                [
+                    1.0,
+                    0.0
+                ],
+                [
+                    1.0,
+                    1.0
+                ],
+                [
+                    0.5,
+                    1.0
+                ]
+            ]
+        },
+        {
+            "name": "thermal_patrol_buffer",
+            "type": "monitored",
+            "severity": "LOW",
+            "polygon": [
+                [
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.5,
+                    0.0
+                ],
+                [
+                    0.5,
+                    1.0
+                ],
+                [
+                    0.0,
+                    1.0
+                ]
+            ]
+        }
+    ],
+    "BOP-03": [
+        {
+            "name": "restricted_barrier_zone",
+            "type": "restricted",
+            "severity": "HIGH",
+            "max_dwell_seconds": 5,
+            "max_objects": 3,
+            "allowed_classes": [
+                "car",
+                "truck",
+                "bus",
+                "motorcycle"
+            ],
+            "polygon": [
+                [
+                    0.0,
+                    0.0
+                ],
+                [
+                    1.0,
+                    0.0
+                ],
+                [
+                    1.0,
+                    0.5
+                ],
+                [
+                    0.0,
+                    0.5
+                ]
+            ]
+        },
+        {
+            "name": "vehicle_queue_lane",
+            "type": "monitored",
+            "severity": "LOW",
+            "polygon": [
+                [
+                    0.0,
+                    0.5
+                ],
+                [
+                    1.0,
+                    0.5
+                ],
+                [
+                    1.0,
+                    1.0
+                ],
+                [
+                    0.0,
+                    1.0
+                ]
+            ]
+        }
+    ]
+}

@@ -1,0 +1,29 @@
+# IBVAP prototype dependencies
+# Install with: pip install -r requirements.txt
+#   (on some systems you may need: pip install -r requirements.txt --break-system-packages)
+
+ultralytics>=8.3.0     # YOLO detection + ByteTrack tracking
+opencv-python>=4.9.0,<5.0.0   # video I/O, drawing, JPEG encoding, Haar cascades
+                              # (pin <5.0.0: opencv-python 5.x removed cv2.CascadeClassifier
+                              # used by app/face/face_detector.py)
+Flask>=3.0.0           # web dashboard
+numpy>=1.26.0
+lap>=0.5.12            # required by ultralytics' ByteTrack implementation
+
+# Installed automatically as a dependency of ultralytics; listed for clarity:
+# torch, torchvision
+
+# Face recognition (Priority 2) -- deep embedder, default as of the
+# pose/scale-robustness fix. See app/face/embedder_deep.py for why
+# this model was chosen. torch/torchvision are already required above
+# via ultralytics; facenet-pytorch adds only itself on top of that.
+#   - On a fresh machine, `pip install torch` pulls the full CUDA
+#     wheel even on a CPU-only machine; if disk space is tight, a
+#     lighter torch release (this was built/tested against
+#     torch==2.3.1 / torchvision==0.18.1) may be worth pinning
+#     explicitly -- see the final report for why.
+#   - Set IBVAP_FACE_EMBEDDER=lbp to use the original classical LBP
+#     embedder instead (no facenet-pytorch/extra torch features
+#     needed beyond what ultralytics already requires).
+facenet-pytorch>=2.6.0
+pytesseract>=0.3.10    # ANPR OCR engine (requires system tesseract binary: brew install tesseract / apt install tesseract-ocr)
