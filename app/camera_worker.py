@@ -650,7 +650,7 @@ class CameraWorker:
                     accel_val = det.get("acceleration", 0.0)
                     prev_v = det.get("prev_velocity", 0.0)
                     if det["class_name"] == "person" and det.get("age_seconds", 0.0) > 0.2:
-                        if abs(accel_val) >= 120.0 or (speed_val >= 100.0 and prev_v < 60.0):
+                        if speed_val >= 60.0 and (abs(accel_val) >= 120.0 or (speed_val >= 90.0 and prev_v < 50.0)):
                             boundary_rel = "INSIDE_RESTRICTED_ZONE" if zones_now else "TOWARD_RESTRICTED_PERIMETER"
                             accel_reason = (
                                 f"Sudden acceleration/running detected ({speed_val:.0f} px/s, "
@@ -658,19 +658,23 @@ class CameraWorker:
                             )
                             reasons.append(accel_reason)
                             level = RiskLevel.max(level, RiskLevel.HIGH if zones_now else RiskLevel.MEDIUM)
-                            event_bus.publish(SuddenMovementEvent(
-                                camera_id=self.camera_id,
-                                track_id=global_track_id,
-                                previous_velocity=float(prev_v),
-                                current_velocity=float(speed_val),
-                                direction=str(det.get("direction", "UNKNOWN")),
-                                acceleration=float(accel_val),
-                                boundary_relationship=boundary_rel,
-                                resulting_event="SUDDEN_ACCELERATION",
-                                object_type="person",
-                                timestamp=time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(timestamp)),
-                                event_id=f"ACCEL-{self.camera_id}-{int(timestamp)}-{det['track_id']}",
-                            ))
+                            last_accel_pub = getattr(self, "_last_accel_pub", {})
+                            if (timestamp - last_accel_pub.get(global_track_id, 0)) >= 3.0:
+                                last_accel_pub[global_track_id] = timestamp
+                                self._last_accel_pub = last_accel_pub
+                                event_bus.publish(SuddenMovementEvent(
+                                    camera_id=self.camera_id,
+                                    track_id=global_track_id,
+                                    previous_velocity=float(prev_v),
+                                    current_velocity=float(speed_val),
+                                    direction=str(det.get("direction", "UNKNOWN")),
+                                    acceleration=float(accel_val),
+                                    boundary_relationship=boundary_rel,
+                                    resulting_event="SUDDEN_ACCELERATION",
+                                    object_type="person",
+                                    timestamp=time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(timestamp)),
+                                    event_id=f"ACCEL-{self.camera_id}-{int(timestamp)}-{det['track_id']}",
+                                ))
                     elif det["speed"] > 400 and det["age_seconds"] > 0.3:
                         reasons.append(
                             f"Rapid movement detected ({det['speed']:.0f} px/s)"
@@ -1159,7 +1163,9 @@ class CameraWorker:
             )
 
     def _draw_track_label(self, frame, det):
-        x1, y1, _, _ = det["box"]
+        x1, y1, x2, y2 = det["box"]
+        # Explicit bounding box around detected and tracked person/object
+        cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
         speed_val = det.get("speed", 0.0)
         dir_val = det.get("direction", "STATIONARY")
         motion_tag = f" [{dir_val} {speed_val:.0f}px/s]" if speed_val >= 8.0 else " [STATIONARY]"

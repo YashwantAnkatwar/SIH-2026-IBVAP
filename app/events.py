@@ -51,6 +51,11 @@ class ZoneEvent:
     direction: str = ""
     box: tuple = ()
     severity: str = ""
+    event_type: str = ""
+
+    def __post_init__(self):
+        if not self.event_type:
+            self.event_type = self.kind
 
 
 @dataclass

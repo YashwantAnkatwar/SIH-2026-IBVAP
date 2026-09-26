@@ -33,8 +33,8 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "description": "Detects people across camera streams using YOLO with confidence filtering and bounding boxes.",
         "short_description": "Detects people across camera streams using YOLO with confidence filtering and bounding boxes.",
         "primary_camera": "DEMO-01",
-        "demo_video": "bop1_visdrone_aerial.mp4",
-        "demo_video_file": "bop1_visdrone_aerial.mp4",
+        "demo_video": "Walk1.mpg",
+        "demo_video_file": "Walk1.mpg",
         "expected_event_types": ["TRACK", "ZONE_ENTER"],
         "expected_event_type": "TRACK, ZONE_ENTER",
         "target_class": "person",
@@ -47,8 +47,8 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "description": "Maintains persistent ByteTrack track IDs, velocity vectors, cardinal heading, and trajectory histories while people remain visible.",
         "short_description": "Maintains persistent ByteTrack track IDs, velocity vectors, cardinal heading, and trajectory histories while people remain visible.",
         "primary_camera": "DEMO-01",
-        "demo_video": "bop1_visdrone_aerial.mp4",
-        "demo_video_file": "bop1_visdrone_aerial.mp4",
+        "demo_video": "Walk2.mpg",
+        "demo_video_file": "Walk2.mpg",
         "expected_event_types": ["TRACK"],
         "expected_event_type": "TRACK",
         "target_class": "person",
@@ -117,8 +117,8 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "description": "Calculates 2D vector cross-product crossings over virtual border lines, distinguishing inbound from outbound crossing.",
         "short_description": "Calculates 2D vector cross-product crossings over virtual border lines, distinguishing inbound from outbound crossing.",
         "primary_camera": "DEMO-01",
-        "demo_video": "bop1_visdrone_aerial.mp4",
-        "demo_video_file": "bop1_visdrone_aerial.mp4",
+        "demo_video": "Walk2.mpg",
+        "demo_video_file": "Walk2.mpg",
         "expected_event_types": ["LINE_CROSSING"],
         "expected_event_type": "LINE_CROSSING",
         "target_class": None,
@@ -131,8 +131,8 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "description": "Tracks occupancy duration inside zones with two-stage thresholding: warning dwell (5s) and critical loitering (15s).",
         "short_description": "Tracks occupancy duration inside zones with two-stage thresholding: warning dwell (5s) and critical loitering (15s).",
         "primary_camera": "DEMO-01",
-        "demo_video": "bop1_visdrone_aerial.mp4",
-        "demo_video_file": "bop1_visdrone_aerial.mp4",
+        "demo_video": "Browse_WhileWaiting1.mpg",
+        "demo_video_file": "Browse_WhileWaiting1.mpg",
         "expected_event_types": ["EXTENDED_DWELL", "LOITERING"],
         "expected_event_type": "EXTENDED_DWELL, LOITERING",
         "target_class": None,
@@ -145,8 +145,8 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "description": "Computes kinematic acceleration and speed deltas to detect running, sprinting, or rapid fleeing near perimeter boundaries.",
         "short_description": "Computes kinematic acceleration and speed deltas to detect running, sprinting, or rapid fleeing near perimeter boundaries.",
         "primary_camera": "DEMO-01",
-        "demo_video": "bop1_visdrone_aerial.mp4",
-        "demo_video_file": "bop1_visdrone_aerial.mp4",
+        "demo_video": "Fight_RunAway1.mpg",
+        "demo_video_file": "Fight_RunAway1.mpg",
         "expected_event_types": ["SUDDEN_ACCELERATION", "RAPID_MOVEMENT"],
         "expected_event_type": "SUDDEN_ACCELERATION, RAPID_MOVEMENT",
         "target_class": "person",
@@ -159,8 +159,8 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "description": "Monitors spatial clustering to flag group incursions when 3 or more simultaneous objects occupy a restricted zone.",
         "short_description": "Monitors spatial clustering to flag group incursions when 3 or more simultaneous objects occupy a restricted zone.",
         "primary_camera": "DEMO-01",
-        "demo_video": "bop1_visdrone_aerial.mp4",
-        "demo_video_file": "bop1_visdrone_aerial.mp4",
+        "demo_video": "Meet_WalkTogether2.mpg",
+        "demo_video_file": "Meet_WalkTogether2.mpg",
         "expected_event_types": ["GROUP_INCURSION", "ZONE_ENTER"],
         "expected_event_type": "GROUP_INCURSION, ZONE_ENTER",
         "target_class": None,
@@ -297,47 +297,73 @@ class DemoSession:
 
         # Use fallback if primary does not exist
         if not video_path.exists():
-            for alt in ["bop1_visdrone_aerial.mp4", "bop3_indian_checkpoint_traffic.mp4", "bop2_kaist_night_thermal.mp4"]:
-                alt_path = config.PROJECT_ROOT / "videos" / alt
-                if alt_path.exists():
-                    video_path = alt_path
-                    break
+            ext_path = Path("/Users/yashwantankatwar/Documents/DRIVE E/COLLEGE/COLLEGE/HACKATHON/sih 2026/v4/IBVAP_Datasets/dataset_for_test") / demo_vid
+            if ext_path.exists():
+                video_path = ext_path
+            else:
+                for alt in ["bop1_visdrone_aerial.mp4", "bop3_indian_checkpoint_traffic.mp4", "bop2_kaist_night_thermal.mp4"]:
+                    alt_path = config.PROJECT_ROOT / "videos" / alt
+                    if alt_path.exists():
+                        video_path = alt_path
+                        break
 
-        # Define 3 demo cameras matching the 3-camera layout
-        demo_configs = {
-            "DEMO-01": {
-                "name": "DEMO-01 (Sector North · Recon)",
-                "source": str(video_path if primary_cam in ("DEMO-01", "BOP-01") else config.PROJECT_ROOT / "videos" / "bop1_visdrone_aerial.mp4"),
-                "anpr_enabled": (self.feature_id == "anpr"),
-                "face_enabled": (self.feature_id == "face_recognition"),
-                "night_enabled": False,
-            },
-            "DEMO-02": {
-                "name": "DEMO-02 (Sector East · Thermal/Portal)",
-                "source": str(video_path if primary_cam in ("DEMO-02", "BOP-02") else (
-                    config.PROJECT_ROOT / "videos" / "face_chokepoint_p2e_s5_c1.mp4"
-                    if self.feature_id == "face_recognition"
-                    else config.PROJECT_ROOT / "videos" / "bop2_kaist_night_thermal.mp4"
-                )),
-                "anpr_enabled": (self.feature_id == "anpr"),
-                "face_enabled": (self.feature_id == "face_recognition"),
-                "night_enabled": (self.feature_id == "night_movement"),
-            },
-            "DEMO-03": {
-                "name": "DEMO-03 (BOP Checkpoint & Gate)",
-                "source": str(video_path if primary_cam in ("DEMO-03", "BOP-03") else config.PROJECT_ROOT / "videos" / "bop3_indian_checkpoint_traffic.mp4"),
-                "anpr_enabled": (self.feature_id == "anpr" or True),
-                "face_enabled": (self.feature_id == "face_recognition"),
-                "night_enabled": False,
-            },
+        # For the 6 human/behavioral test features, run ONLY DEMO-01 with its designated video.
+        # Remove all other auxiliary videos (DEMO-02, DEMO-03) from these 6 sections.
+        six_single_cam_features = {
+            "human_detection",
+            "human_tracking",
+            "tripwire",
+            "loitering",
+            "sudden_movement",
+            "group_incursion",
         }
 
+        if self.feature_id in six_single_cam_features:
+            demo_configs = {
+                "DEMO-01": {
+                    "name": f"DEMO-01 ({self.feature_meta['name']})",
+                    "source": str(video_path),
+                    "anpr_enabled": False,
+                    "face_enabled": False,
+                    "night_enabled": False,
+                }
+            }
+        else:
+            demo_configs = {
+                "DEMO-01": {
+                    "name": "DEMO-01 (Sector North · Recon)",
+                    "source": str(video_path if primary_cam in ("DEMO-01", "BOP-01") else config.PROJECT_ROOT / "videos" / "bop1_visdrone_aerial.mp4"),
+                    "anpr_enabled": (self.feature_id == "anpr"),
+                    "face_enabled": (self.feature_id == "face_recognition"),
+                    "night_enabled": False,
+                },
+                "DEMO-02": {
+                    "name": "DEMO-02 (Sector East · Thermal/Portal)",
+                    "source": str(video_path if primary_cam in ("DEMO-02", "BOP-02") else (
+                        config.PROJECT_ROOT / "videos" / "face_chokepoint_p2e_s5_c1.mp4"
+                        if self.feature_id == "face_recognition"
+                        else config.PROJECT_ROOT / "videos" / "bop2_kaist_night_thermal.mp4"
+                    )),
+                    "anpr_enabled": (self.feature_id == "anpr"),
+                    "face_enabled": (self.feature_id == "face_recognition"),
+                    "night_enabled": (self.feature_id == "night_movement"),
+                },
+                "DEMO-03": {
+                    "name": "DEMO-03 (BOP Checkpoint & Gate)",
+                    "source": str(video_path if primary_cam in ("DEMO-03", "BOP-03") else config.PROJECT_ROOT / "videos" / "bop3_indian_checkpoint_traffic.mp4"),
+                    "anpr_enabled": (self.feature_id == "anpr" or True),
+                    "face_enabled": (self.feature_id == "face_recognition"),
+                    "night_enabled": False,
+                },
+            }
+
+        worker_conf = 0.18 if self.feature_id in six_single_cam_features else config.CONFIDENCE_THRESHOLD
         for cam_id, cfg in demo_configs.items():
             worker = CameraWorker(
                 camera_id=cam_id,
                 source=cfg["source"],
                 model_path=config.MODEL_PATH,
-                confidence=config.CONFIDENCE_THRESHOLD,
+                confidence=worker_conf,
                 anpr_enabled=cfg.get("anpr_enabled", False),
                 face_enabled=cfg.get("face_enabled", False),
                 name=cfg["name"],
@@ -351,16 +377,52 @@ class DemoSession:
             self.demo_workers[cam_id] = worker
 
     def _subscribe_events(self):
-        """Listen to event bus for events generated by demo workers."""
+        """Listen to event bus for events generated by demo workers, filtering to the capability under test."""
         self._sse_queue = event_bus.subscribe()
+        expected_types = set(self.feature_meta.get("expected_event_types", []))
+        seen_events = {}
 
         def listener():
             while self.is_active:
                 try:
                     ev = self._sse_queue.get(timeout=1.0)
-                    if hasattr(ev, "camera_id") and str(ev.camera_id).startswith("DEMO-"):
-                        with self._lock:
-                            self.collected_events.append(ev)
+                    if not (hasattr(ev, "camera_id") and str(ev.camera_id).startswith("DEMO-")):
+                        continue
+
+                    ev_type = getattr(ev, "event_type", getattr(ev, "kind", type(ev).__name__))
+                    ev_kind = getattr(ev, "event_kind", "")
+                    ev_sub_kind = getattr(ev, "kind", "")
+                    cls_name = type(ev).__name__
+
+                    # Check if event matches target capability criteria
+                    is_match = False
+                    if not expected_types:
+                        is_match = True
+                    else:
+                        for exp in expected_types:
+                            exp_u = exp.upper()
+                            if (exp_u in ev_type.upper() or 
+                                exp_u in ev_kind.upper() or 
+                                exp_u in ev_sub_kind.upper() or
+                                exp_u in cls_name.upper() or
+                                (exp_u == "TRACK" and cls_name == "TrackEvent")):
+                                is_match = True
+                                break
+
+                    if not is_match:
+                        continue
+
+                    # Deduplication: do not spam the event list with duplicate detections for the same track
+                    now = time.time()
+                    tid = getattr(ev, "track_id", "")
+                    zone = getattr(ev, "zone", "")
+                    sig = (ev_type, str(tid), str(zone))
+                    if sig in seen_events and (now - seen_events[sig]) < 8.0:
+                        continue
+                    seen_events[sig] = now
+
+                    with self._lock:
+                        self.collected_events.append(ev)
                 except Exception:
                     pass
 
@@ -376,11 +438,14 @@ class DemoSession:
         output = []
         for ev in reversed(raw_list):
             if hasattr(ev, "to_dict"):
-                output.append(ev.to_dict())
+                d = ev.to_dict()
             elif hasattr(ev, "__dict__"):
-                output.append({k: v for k, v in ev.__dict__.items() if not k.startswith("_")})
+                d = {k: v for k, v in ev.__dict__.items() if not k.startswith("_")}
             else:
-                output.append(str(ev))
+                d = {"detail": str(ev)}
+            if "event_type" not in d or not d["event_type"]:
+                d["event_type"] = getattr(ev, "kind", getattr(ev, "event_type", type(ev).__name__))
+            output.append(d)
         return output
 
     def get_telemetry(self) -> Dict[str, Any]:
@@ -449,6 +514,10 @@ class TestCenterManager:
         result = []
         for f in FEATURE_INVENTORY:
             vid_path = config.PROJECT_ROOT / "videos" / f["demo_video"]
+            if not vid_path.exists():
+                ext_path = Path("/Users/yashwantankatwar/Documents/DRIVE E/COLLEGE/COLLEGE/HACKATHON/sih 2026/v4/IBVAP_Datasets/dataset_for_test") / f["demo_video"]
+                if ext_path.exists():
+                    vid_path = ext_path
             status = "READY"
             if not model_exists:
                 status = "NOT AVAILABLE (Model missing)"

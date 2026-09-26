@@ -301,6 +301,7 @@
   /* Demo Session View */
   .demo-session-modal { max-width: 1300px !important; width: 96% !important; background: #080c12 !important; }
   .demo-feeds-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+  .demo-feeds-grid.single-feed { grid-template-columns: 1fr; max-width: 820px; margin: 12px auto; }
   @media (max-width: 900px) { .demo-feeds-grid { grid-template-columns: 1fr; } }
   .demo-feed-box { background: #000; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; position: relative; }
   .demo-feed-box.primary { border-color: var(--cyan); box-shadow: 0 0 16px rgba(0,229,255,0.25); }
@@ -2289,27 +2290,51 @@ async function startDemoSession(featureId) {
       </div>
     `;
 
-    // Highlight Primary Camera feed box
-    ['01', '02', '03'].forEach(idx => {
-      const camId = `DEMO-${idx}`;
-      const box = document.getElementById(`demo-box-${idx}`);
-      const tag = document.getElementById(`demo-tag-${idx}`);
-      if (feat.primary_camera === camId) {
-        box.classList.add('primary');
-        tag.classList.add('primary');
-        tag.textContent = `${camId} (PRIMARY TARGET)`;
-      } else {
-        box.classList.remove('primary');
-        tag.classList.remove('primary');
-        tag.textContent = `${camId} (AUXILIARY SECTOR)`;
-      }
-    });
-
-    // Mount Isolated Demo Video Streams with cache buster
+    // Check if this feature is one of the 6 single-video demonstration sections
+    const sixSingleFeedFeatures = ['human_detection', 'human_tracking', 'tripwire', 'loitering', 'sudden_movement', 'group_incursion'];
+    const isSingleFeed = sixSingleFeedFeatures.includes(featureId);
+    const feedsGrid = document.querySelector('.demo-feeds-grid');
     const cacheBuster = Date.now();
-    document.getElementById('demo-feed-01').src = `/demo_feed/DEMO-01?t=${cacheBuster}`;
-    document.getElementById('demo-feed-02').src = `/demo_feed/DEMO-02?t=${cacheBuster}`;
-    document.getElementById('demo-feed-03').src = `/demo_feed/DEMO-03?t=${cacheBuster}`;
+
+    if (isSingleFeed) {
+      if (feedsGrid) feedsGrid.classList.add('single-feed');
+      document.getElementById('demo-box-01').style.display = 'block';
+      document.getElementById('demo-box-02').style.display = 'none';
+      document.getElementById('demo-box-03').style.display = 'none';
+
+      const box1 = document.getElementById('demo-box-01');
+      const tag1 = document.getElementById('demo-tag-01');
+      box1.classList.add('primary');
+      tag1.classList.add('primary');
+      tag1.textContent = `DEMO-01 (PRIMARY TARGET)`;
+
+      // Mount ONLY the primary video feed for these 6 sections
+      document.getElementById('demo-feed-01').src = `/demo_feed/DEMO-01?t=${cacheBuster}`;
+      document.getElementById('demo-feed-02').src = '';
+      document.getElementById('demo-feed-03').src = '';
+    } else {
+      if (feedsGrid) feedsGrid.classList.remove('single-feed');
+      ['01', '02', '03'].forEach(idx => {
+        const camId = `DEMO-${idx}`;
+        const box = document.getElementById(`demo-box-${idx}`);
+        const tag = document.getElementById(`demo-tag-${idx}`);
+        box.style.display = 'block';
+        if (feat.primary_camera === camId) {
+          box.classList.add('primary');
+          tag.classList.add('primary');
+          tag.textContent = `${camId} (PRIMARY TARGET)`;
+        } else {
+          box.classList.remove('primary');
+          tag.classList.remove('primary');
+          tag.textContent = `${camId} (AUXILIARY SECTOR)`;
+        }
+      });
+
+      // Mount Isolated Demo Video Streams with cache buster
+      document.getElementById('demo-feed-01').src = `/demo_feed/DEMO-01?t=${cacheBuster}`;
+      document.getElementById('demo-feed-02').src = `/demo_feed/DEMO-02?t=${cacheBuster}`;
+      document.getElementById('demo-feed-03').src = `/demo_feed/DEMO-03?t=${cacheBuster}`;
+    }
 
     // Start Telemetry & Event Polling
     activeDemoSessionStartTime = Date.now();
@@ -2444,7 +2469,12 @@ async function exitDemoSession(returnToHub = false) {
   ['01', '02', '03'].forEach(idx => {
     const feed = document.getElementById(`demo-feed-${idx}`);
     if (feed) feed.src = '';
+    const box = document.getElementById(`demo-box-${idx}`);
+    if (box) box.style.display = 'block';
   });
+
+  const feedsGrid = document.querySelector('.demo-feeds-grid');
+  if (feedsGrid) feedsGrid.classList.remove('single-feed');
 
   if (activeDemoPollingTimer) {
     clearInterval(activeDemoPollingTimer);

@@ -102,7 +102,7 @@ TARGET_PROCESSING_FPS = int(os.environ.get("IBVAP_TARGET_FPS", 15))
 
 CONFIDENCE_THRESHOLD = float(os.environ.get("IBVAP_CONFIDENCE", 0.35))
 
-TRACKER = "bytetrack.yaml"
+TRACKER = str(CONFIG_DIR / "bytetrack.yaml") if (CONFIG_DIR / "bytetrack.yaml").exists() else "bytetrack.yaml"
 
 
 # =========================================================
