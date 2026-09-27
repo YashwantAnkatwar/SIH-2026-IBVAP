@@ -30,6 +30,7 @@
             "name": "pedestrian_lane",
             "type": "monitored",
             "severity": "LOW",
+            "max_objects": 3,
             "polygon": [
                 [
                     0.0,

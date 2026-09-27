@@ -66,7 +66,7 @@ class TamperDetector:
                 f"Camera lens blinded/saturated (mean={avg_mean:.1f}, std={avg_std:.1f})"
             )
         # 3. Defocus: almost no edge energy despite moderate brightness
-        elif avg_sharpness < 3.0 and avg_std < 12.0 and 20.0 <= avg_mean <= 235.0:
+        elif avg_sharpness < 6.0 and 20.0 <= avg_mean <= 235.0:
             self.is_tampered = True
             self.tamper_type = "DEFOCUS"
             self.tamper_reason = (

@@ -93,7 +93,7 @@ CAMERAS = {
     },
 }
 
-TARGET_PROCESSING_FPS = int(os.environ.get("IBVAP_TARGET_FPS", 15))
+TARGET_PROCESSING_FPS = int(os.environ.get("IBVAP_TARGET_FPS", 25))
 
 
 # =========================================================
@@ -306,7 +306,7 @@ else:
 # per real camera/site, since fixed CCTV exposure settings vary.
 # =========================================================
 
-NIGHT_LUMINANCE_THRESHOLD = float(os.environ.get("IBVAP_NIGHT_LUMINANCE_THRESHOLD", 70.0))
+NIGHT_LUMINANCE_THRESHOLD = float(os.environ.get("IBVAP_NIGHT_LUMINANCE_THRESHOLD", 80.0))
 
 
 # =========================================================

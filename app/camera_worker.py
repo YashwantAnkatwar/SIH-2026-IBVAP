@@ -89,6 +89,8 @@ class CameraWorker:
         face_enabled=None,
         name=None,
         purpose=None,
+        zones=None,
+        lines=None,
     ):
         self.camera_id = camera_id
         self.source = str(source)
@@ -172,10 +174,10 @@ class CameraWorker:
             self.face_enabled = config.FACE_RECOGNITION_ENABLED
 
         # Geofencing and Lines (reloadable live)
-        self.zone_manager = None
-        self.zones = []
-        self.line_detector = None
-        self.lines = []
+        self.zones = list(zones) if zones is not None else []
+        self.lines = list(lines) if lines is not None else []
+        self.zone_manager = ZoneManager(self.zones) if self.zones else None
+        self.line_detector = LineCrossingDetector(self.lines) if self.lines else None
 
     # =========================================================
     # START / STOP
@@ -311,13 +313,19 @@ class CameraWorker:
                 f"({len(gallery.enrolled_identities)} identities in gallery)."
             )
 
-        zone_config = config.load_zone_config()
-        self.zones = load_zones_for_camera(zone_config, self.camera_id)
-        self.zone_manager = ZoneManager(self.zones)
+        if not self.zones:
+            zone_config = config.load_zone_config()
+            self.zones = load_zones_for_camera(zone_config, self.camera_id)
+            self.zone_manager = ZoneManager(self.zones)
+        elif self.zone_manager is None:
+            self.zone_manager = ZoneManager(self.zones)
 
-        line_config = config.load_line_config()
-        self.lines = load_lines_for_camera(line_config, self.camera_id)
-        self.line_detector = LineCrossingDetector(self.lines)
+        if not self.lines:
+            line_config = config.load_line_config()
+            self.lines = load_lines_for_camera(line_config, self.camera_id)
+            self.line_detector = LineCrossingDetector(self.lines)
+        elif self.line_detector is None:
+            self.line_detector = LineCrossingDetector(self.lines)
 
         risk_engine = RiskEngine(
             dwell_high_seconds=config.RISK_DWELL_HIGH_SECONDS,
@@ -344,8 +352,12 @@ class CameraWorker:
 
             frame_counter = 0
             fps_start_time = time.time()
+            anpr_last_proc_frame = {}
+            face_last_proc_frame = {}
 
             while self.running:
+                anpr_calls_this_frame = 0
+                face_calls_this_frame = 0
                 success, frame = video.read()
 
                 if not success:
@@ -365,11 +377,11 @@ class CameraWorker:
                 self.last_frame_time = timestamp
                 frame_h, frame_w = frame.shape[:2]
 
-                if self.simulated_tamper == "OCCLUSION":
+                if self.simulated_tamper in ("OCCLUSION", "LENS_OCCLUSION"):
                     frame = np.zeros_like(frame)
-                elif self.simulated_tamper == "BLINDING":
+                elif self.simulated_tamper in ("BLINDING", "LASER_BLINDING"):
                     frame = np.full_like(frame, 255)
-                elif self.simulated_tamper == "DEFOCUS":
+                elif self.simulated_tamper in ("DEFOCUS", "DEFOCUS_BLUR", "BLUR"):
                     frame = cv2.GaussianBlur(frame, (51, 51), 0)
 
                 if self.paused:
@@ -536,14 +548,29 @@ class CameraWorker:
                     # detections. Returns a result only on the single frame
                     # a track's plate first becomes temporally stable.
                     if self.anpr_pipeline is not None and det["class_name"] in config.ANPR_VEHICLE_CLASSES:
-                        self._process_anpr(det, frame, global_track_id, timestamp)
+                        agg_state = getattr(self.anpr_pipeline, "_aggregator", None)
+                        track_plate_state = agg_state._tracks.get(global_track_id) if agg_state else None
+                        already_reported = track_plate_state.reported if track_plate_state else False
+                        if not already_reported:
+                            last_f = anpr_last_proc_frame.get(global_track_id, -99)
+                            if (self.frame_count - last_f) >= 3 and anpr_calls_this_frame < 2:
+                                anpr_last_proc_frame[global_track_id] = self.frame_count
+                                anpr_calls_this_frame += 1
+                                self._process_anpr(det, frame, global_track_id, timestamp)
 
                     # Face recognition (Priority 2): only ever called for
                     # person-class detections. Returns a result only on the
                     # frame a track's identity first becomes stable (or
-                    # changes).
                     if self.face_pipeline is not None and det["class_name"] == "person":
-                        self._process_face(det, frame, global_track_id, timestamp)
+                        face_tracks = getattr(self.face_pipeline, "_tracks", {})
+                        person_face_state = face_tracks.get(global_track_id)
+                        already_face_reported = bool(getattr(person_face_state, "reported_identity", None) or getattr(person_face_state, "reported", False))
+                        if not already_face_reported:
+                            last_ff = face_last_proc_frame.get(global_track_id, -99)
+                            if (self.frame_count - last_ff) >= 3 and face_calls_this_frame < 2:
+                                face_last_proc_frame[global_track_id] = self.frame_count
+                                face_calls_this_frame += 1
+                                self._process_face(det, frame, global_track_id, timestamp)
 
                     for ev in zone_events:
                         if ev["type"] == "ZONE_DWELL":
@@ -649,8 +676,8 @@ class CameraWorker:
                     speed_val = det.get("speed", 0.0)
                     accel_val = det.get("acceleration", 0.0)
                     prev_v = det.get("prev_velocity", 0.0)
-                    if det["class_name"] == "person" and det.get("age_seconds", 0.0) > 0.2:
-                        if speed_val >= 60.0 and (abs(accel_val) >= 120.0 or (speed_val >= 90.0 and prev_v < 50.0)):
+                    if det["class_name"] == "person" and det.get("age_seconds", 0.0) > 0.15:
+                        if speed_val >= 25.0 and (abs(accel_val) >= 28.0 or (speed_val >= 32.0 and prev_v < 24.0)):
                             boundary_rel = "INSIDE_RESTRICTED_ZONE" if zones_now else "TOWARD_RESTRICTED_PERIMETER"
                             accel_reason = (
                                 f"Sudden acceleration/running detected ({speed_val:.0f} px/s, "
@@ -659,9 +686,10 @@ class CameraWorker:
                             reasons.append(accel_reason)
                             level = RiskLevel.max(level, RiskLevel.HIGH if zones_now else RiskLevel.MEDIUM)
                             last_accel_pub = getattr(self, "_last_accel_pub", {})
-                            if (timestamp - last_accel_pub.get(global_track_id, 0)) >= 3.0:
+                            if (timestamp - last_accel_pub.get(global_track_id, 0)) >= 2.0:
                                 last_accel_pub[global_track_id] = timestamp
                                 self._last_accel_pub = last_accel_pub
+                                accel_eid = f"ACCEL-{self.camera_id}-{int(timestamp)}-{det['track_id']}"
                                 event_bus.publish(SuddenMovementEvent(
                                     camera_id=self.camera_id,
                                     track_id=global_track_id,
@@ -673,8 +701,22 @@ class CameraWorker:
                                     resulting_event="SUDDEN_ACCELERATION",
                                     object_type="person",
                                     timestamp=time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(timestamp)),
-                                    event_id=f"ACCEL-{self.camera_id}-{int(timestamp)}-{det['track_id']}",
+                                    event_id=accel_eid,
                                 ))
+                                shared.event_store.record(
+                                    camera_id=self.camera_id,
+                                    track_id=global_track_id,
+                                    object_type="person",
+                                    zone=zone_for_alert or "",
+                                    event_type="SUDDEN_ACCELERATION",
+                                    severity="HIGH" if zones_now else "MEDIUM",
+                                    description=accel_reason,
+                                    timestamp=timestamp,
+                                    event_id=accel_eid,
+                                    speed=float(speed_val),
+                                    acceleration=float(accel_val),
+                                    direction=str(det.get("direction", "UNKNOWN")),
+                                )
                     elif det["speed"] > 400 and det["age_seconds"] > 0.3:
                         reasons.append(
                             f"Rapid movement detected ({det['speed']:.0f} px/s)"
@@ -779,28 +821,38 @@ class CameraWorker:
                         reasons=[description], timestamp=timestamp,
                     )
                     if is_new_occurrence:
+                        zv_eid = f"GROUP-{self.camera_id}-{int(timestamp)}-{zv['zone']}"
+                        event_bus.publish(GroupIncursionEvent(
+                            camera_id=self.camera_id,
+                            zone=zv["zone"],
+                            track_ids=list(self.zone_manager._frame_occupancy.get(zv["zone"], set())),
+                            count=zv["count"],
+                            event_id=zv_eid,
+                        ))
                         shared.event_store.record(
                             camera_id=self.camera_id, zone=zv["zone"],
                             track_id=f"{self.camera_id}:{zv['zone']}",
                             object_type="group", event_type=zv["type"],
                             severity="HIGH", description=description,
                             timestamp=timestamp,
+                            event_id=zv_eid,
+                            member_count=zv["count"],
                         )
 
-                # Spatial group incursion detection (>=3 persons clustered together in restricted zone)
+                # Spatial group incursion detection (>=3 targets clustered together in restricted/monitored zone)
                 for zone in self.zones:
-                    if zone.zone_type == "restricted":
+                    if zone.zone_type in ("restricted", "monitored") or zone.max_objects:
                         occupants = [
                             (d["track_id"], d["center"]) for d, _, _, _, _ in per_track_results
-                            if d["class_name"] == "person" and zone.contains(d["center"][0], d["center"][1], frame_w, frame_h)
+                            if zone.contains(d["center"][0], d["center"][1], frame_w, frame_h)
                         ]
                         if len(occupants) >= 3:
-                            clusters = RiskEngine.find_spatial_clusters(occupants, cluster_radius=250.0)
+                            clusters = RiskEngine.find_spatial_clusters(occupants, cluster_radius=280.0)
                             for cluster_tids in clusters:
                                 if len(cluster_tids) >= 3:
                                     group_desc = (
-                                        f"Group incursion: {len(cluster_tids)} persons clustered together "
-                                        f"in restricted zone '{zone.name}' (tracks: {', '.join(str(t) for t in cluster_tids)})"
+                                        f"Group incursion: {len(cluster_tids)} targets clustered together "
+                                        f"in zone '{zone.name}' (tracks: {', '.join(str(t) for t in cluster_tids)})"
                                     )
                                     frame_alerts.append(group_desc)
                                     frame_risk = RiskLevel.max(frame_risk, RiskLevel.HIGH)
@@ -848,6 +900,8 @@ class CameraWorker:
                         self.anpr_pipeline.forget_track(global_tid)
                     if self.face_pipeline is not None:
                         self.face_pipeline.forget_track(global_tid)
+                    anpr_last_proc_frame.pop(global_tid, None)
+                    face_last_proc_frame.pop(global_tid, None)
                 self.zone_manager.cleanup(tracker.active_track_ids())
                 self.line_detector.cleanup(tracker.active_track_ids())
 
@@ -1169,7 +1223,21 @@ class CameraWorker:
         speed_val = det.get("speed", 0.0)
         dir_val = det.get("direction", "STATIONARY")
         motion_tag = f" [{dir_val} {speed_val:.0f}px/s]" if speed_val >= 8.0 else " [STATIONARY]"
-        label = f"{det['class_name']} #{det['track_id']} {det['confidence']:.2f}{motion_tag}"
+
+        global_tid = f"{self.camera_id}:{det['track_id']}"
+        plate_tag = ""
+        if self.anpr_pipeline:
+            cur_p = self.anpr_pipeline.current_plate_for(global_tid)
+            if cur_p and cur_p[0]:
+                plate_tag = f" [{cur_p[0]}]"
+
+        face_tag = ""
+        if self.face_pipeline:
+            cur_f = self.face_pipeline.current_identity_for(global_tid)
+            if cur_f and cur_f[0]:
+                face_tag = f" [{cur_f[0]}]"
+
+        label = f"{det['class_name']} #{det['track_id']} {det['confidence']:.2f}{motion_tag}{plate_tag}{face_tag}"
         label_pos = (int(x1), max(int(y1) - 8, 14))
         cv2.putText(
             frame, label, label_pos,
@@ -1177,22 +1245,37 @@ class CameraWorker:
         )
 
     def _draw_hud(self, frame):
-        cv2.putText(frame, f"CAMERA: {self.camera_id}", (20, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2, cv2.LINE_AA)
-        cv2.putText(frame, f"FPS: {self.fps:.1f}", (20, 58),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
-        cv2.putText(frame, f"STATUS: {self.status}", (20, 84),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
+        frame_h, frame_w = frame.shape[:2]
+        # Compact adaptive font scale (unobtrusive, reduced footprint)
+        scale = max(0.30, min(0.40, frame_h / 700.0))
+        thick = 1
+        line_h = int(scale * 34)
+        y_start = int(scale * 32)
+        x_pad = 8
 
         risk_color = {
-            RiskLevel.LOW: (0, 200, 0),
+            RiskLevel.LOW: (0, 220, 0),
             RiskLevel.MEDIUM: (0, 200, 255),
             RiskLevel.HIGH: (0, 120, 255),
             RiskLevel.CRITICAL: (0, 0, 255),
         }.get(self.risk_level, (255, 255, 255))
-        cv2.putText(frame, f"RISK: {self.risk_level}", (20, 110),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, risk_color, 2, cv2.LINE_AA)
 
+        lines = [
+            (f"FPS: {self.fps:.1f}", (0, 255, 0)),
+            (f"STATUS: {self.status}", (0, 255, 0)),
+            (f"RISK: {self.risk_level}", risk_color),
+        ]
         if self.tamper_state.get("is_tampered"):
-            cv2.putText(frame, f"TAMPER: {self.tamper_state.get('tamper_type')}", (20, 136),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 255), 2, cv2.LINE_AA)
+            lines.append((f"TAMPER: {self.tamper_state.get('tamper_type')}", (0, 0, 255)))
+
+        # Draw neat compact semi-transparent backing box so text is readable without cluttering video
+        box_w = int(scale * 300)
+        box_h = y_start + len(lines) * line_h + 4
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (4, 4), (box_w, box_h), (12, 16, 24), -1)
+        cv2.addWeighted(overlay, 0.65, frame, 0.35, 0, frame)
+
+        for i, (text, col) in enumerate(lines):
+            y = y_start + i * line_h
+            cv2.putText(frame, text, (x_pad, y),
+                        cv2.FONT_HERSHEY_SIMPLEX, scale, col, thick, cv2.LINE_AA)

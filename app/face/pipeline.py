@@ -46,6 +46,10 @@ class FaceTrackState:
     last_similarity: float = 0.0
     last_threshold: float = 0.42
 
+    @property
+    def reported(self) -> bool:
+        return bool(self.reported_identity)
+
 
 @dataclass
 class FaceRecognitionResult:

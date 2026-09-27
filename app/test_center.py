@@ -60,9 +60,9 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "category": "Computer Vision",
         "description": "Detects and classifies motor vehicles into distinct classes: car, truck, bus, and motorcycle.",
         "short_description": "Detects and classifies motor vehicles into distinct classes: car, truck, bus, and motorcycle.",
-        "primary_camera": "DEMO-03",
-        "demo_video": "bop3_indian_checkpoint_traffic.mp4",
-        "demo_video_file": "bop3_indian_checkpoint_traffic.mp4",
+        "primary_camera": "DEMO-01",
+        "demo_video": "2024-04-24 10-35-00.mp4",
+        "demo_video_file": "2024-04-24 10-35-00.mp4",
         "expected_event_types": ["TRACK"],
         "expected_event_type": "TRACK",
         "target_class": "vehicle",
@@ -74,9 +74,9 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "category": "Identity & Access",
         "description": "Detects vehicle plates, crops bumpers, executes dual-pass OCR, aggregates reads across frames, and validates 36 Indian state codes.",
         "short_description": "Detects vehicle plates, crops bumpers, executes dual-pass OCR, aggregates reads across frames, and validates 36 Indian state codes.",
-        "primary_camera": "DEMO-03",
-        "demo_video": "bop3_indian_checkpoint_traffic.mp4",
-        "demo_video_file": "bop3_indian_checkpoint_traffic.mp4",
+        "primary_camera": "DEMO-01",
+        "demo_video": "sih_video.mov",
+        "demo_video_file": "sih_video.mov",
         "expected_event_types": ["ANPR_PLATE_READ"],
         "expected_event_type": "ANPR_PLATE_READ",
         "target_class": "vehicle",
@@ -88,9 +88,9 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "category": "Identity & Access",
         "description": "Detects faces at chokepoints, applies quality/sharpness filtering, generates embeddings, and matches against the authorized gallery.",
         "short_description": "Detects faces at chokepoints, applies quality/sharpness filtering, generates embeddings, and matches against the authorized gallery.",
-        "primary_camera": "DEMO-02",
-        "demo_video": "face_chokepoint_p2e_s5_c1.mp4",
-        "demo_video_file": "face_chokepoint_p2e_s5_c1.mp4",
+        "primary_camera": "DEMO-01",
+        "demo_video": "output (1).mp4",
+        "demo_video_file": "output (1).mp4",
         "expected_event_types": ["FACE_RECOGNITION", "FACE_MATCH"],
         "expected_event_type": "FACE_RECOGNITION, FACE_MATCH",
         "target_class": "person",
@@ -103,8 +103,8 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "description": "Performs ray-casting polygon boundary tests and triggers breach alerts when objects enter configured restricted zones.",
         "short_description": "Performs ray-casting polygon boundary tests and triggers breach alerts when objects enter configured restricted zones.",
         "primary_camera": "DEMO-01",
-        "demo_video": "bop1_visdrone_aerial.mp4",
-        "demo_video_file": "bop1_visdrone_aerial.mp4",
+        "demo_video": "worker-zone-detection.mp4",
+        "demo_video_file": "worker-zone-detection.mp4",
         "expected_event_types": ["ZONE_ENTER", "UNAUTHORIZED_ZONE_ENTRY"],
         "expected_event_type": "ZONE_ENTER, UNAUTHORIZED_ZONE_ENTRY",
         "target_class": None,
@@ -147,7 +147,7 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "primary_camera": "DEMO-01",
         "demo_video": "Fight_RunAway1.mpg",
         "demo_video_file": "Fight_RunAway1.mpg",
-        "expected_event_types": ["SUDDEN_ACCELERATION", "RAPID_MOVEMENT"],
+        "expected_event_types": ["SUDDEN_ACCELERATION", "RAPID_MOVEMENT", "SUDDEN_MOVEMENT", "ACCEL", "BEHAVIOR"],
         "expected_event_type": "SUDDEN_ACCELERATION, RAPID_MOVEMENT",
         "target_class": "person",
         "timeout_seconds": 8.0,
@@ -159,9 +159,9 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "description": "Monitors spatial clustering to flag group incursions when 3 or more simultaneous objects occupy a restricted zone.",
         "short_description": "Monitors spatial clustering to flag group incursions when 3 or more simultaneous objects occupy a restricted zone.",
         "primary_camera": "DEMO-01",
-        "demo_video": "Meet_WalkTogether2.mpg",
-        "demo_video_file": "Meet_WalkTogether2.mpg",
-        "expected_event_types": ["GROUP_INCURSION", "ZONE_ENTER"],
+        "demo_video": "10.mp4",
+        "demo_video_file": "10.mp4",
+        "expected_event_types": ["GROUP_INCURSION", "GROUP", "ZONE_ENTER", "UNAUTHORIZED_ZONE_ENTRY"],
         "expected_event_type": "GROUP_INCURSION, ZONE_ENTER",
         "target_class": None,
         "timeout_seconds": 8.0,
@@ -170,12 +170,12 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "id": "night_movement",
         "name": "Night-Time & Thermal Movement",
         "category": "Sensor Analytics",
-        "description": "Computes real-time scene luminance (< 40 threshold) on thermal/IR feeds and gates movement detection in low-light zones.",
-        "short_description": "Computes real-time scene luminance (< 40 threshold) on thermal/IR feeds and gates movement detection in low-light zones.",
+        "description": "Computes real-time scene luminance (< 80 threshold) on thermal/IR feeds and gates movement detection in low-light zones.",
+        "short_description": "Computes real-time scene luminance (< 80 threshold) on thermal/IR feeds and gates movement detection in low-light zones.",
         "primary_camera": "DEMO-02",
-        "demo_video": "bop2_kaist_night_thermal.mp4",
-        "demo_video_file": "bop2_kaist_night_thermal.mp4",
-        "expected_event_types": ["NIGHT_MOVEMENT", "ZONE_ENTER"],
+        "demo_video": "night_movement.mp4",
+        "demo_video_file": "night_movement.mp4",
+        "expected_event_types": ["NIGHT_MOVEMENT", "NIGHT", "ZONE_ENTER"],
         "expected_event_type": "NIGHT_MOVEMENT, ZONE_ENTER",
         "target_class": None,
         "timeout_seconds": 8.0,
@@ -189,7 +189,7 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "primary_camera": "DEMO-03",
         "demo_video": "bop3_indian_checkpoint_traffic.mp4",
         "demo_video_file": "bop3_indian_checkpoint_traffic.mp4",
-        "expected_event_types": ["CAMERA_TAMPER", "DEFOCUS_BLUR", "LENS_OCCLUSION"],
+        "expected_event_types": ["CAMERA_TAMPER", "CAMERA_TAMPERED", "DEFOCUS_BLUR", "DEFOCUS", "OCCLUSION", "BLINDING", "TAMPER"],
         "expected_event_type": "CAMERA_TAMPER, DEFOCUS_BLUR",
         "target_class": None,
         "timeout_seconds": 8.0,
@@ -203,7 +203,7 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "primary_camera": "DEMO-01",
         "demo_video": "bop1_visdrone_aerial.mp4",
         "demo_video_file": "bop1_visdrone_aerial.mp4",
-        "expected_event_types": ["RISK_LEVEL_CHANGE", "ZONE_ENTER"],
+        "expected_event_types": ["RISK", "RISK_LEVEL_CHANGE", "ZONE_RISK", "ZONE_ENTER"],
         "expected_event_type": "RISK_LEVEL_CHANGE, ZONE_ENTER",
         "target_class": None,
         "timeout_seconds": 8.0,
@@ -217,7 +217,7 @@ FEATURE_INVENTORY: List[Dict[str, Any]] = [
         "primary_camera": "DEMO-01",
         "demo_video": "bop1_visdrone_aerial.mp4",
         "demo_video_file": "bop1_visdrone_aerial.mp4",
-        "expected_event_types": ["INCIDENT_CREATED", "ZONE_ENTER"],
+        "expected_event_types": ["INCIDENT", "INCIDENT_CREATED", "INCIDENT_UPDATE", "ZONE_ENTER"],
         "expected_event_type": "INCIDENT_CREATED, ZONE_ENTER",
         "target_class": None,
         "timeout_seconds": 8.0,
@@ -258,7 +258,8 @@ class DemoSession:
         self.created_at = time.time()
         self.is_active = True
         self.demo_workers: Dict[str, CameraWorker] = {}
-        self.collected_events: deque = deque(maxlen=200)
+        self.collected_events: deque = deque(maxlen=2000)
+        self.total_events_collected: int = 0
         self._lock = threading.Lock()
         self._sse_queue = None
 
@@ -293,32 +294,76 @@ class DemoSession:
         """Spins up isolated demo workers without touching normal camera workers."""
         primary_cam = self.feature_meta["primary_camera"]
         demo_vid = self.feature_meta["demo_video"]
-        video_path = config.PROJECT_ROOT / "videos" / demo_vid
 
-        # Use fallback if primary does not exist
-        if not video_path.exists():
-            ext_path = Path("/Users/yashwantankatwar/Documents/DRIVE E/COLLEGE/COLLEGE/HACKATHON/sih 2026/v4/IBVAP_Datasets/dataset_for_test") / demo_vid
-            if ext_path.exists():
-                video_path = ext_path
-            else:
-                for alt in ["bop1_visdrone_aerial.mp4", "bop3_indian_checkpoint_traffic.mp4", "bop2_kaist_night_thermal.mp4"]:
-                    alt_path = config.PROJECT_ROOT / "videos" / alt
-                    if alt_path.exists():
-                        video_path = alt_path
-                        break
+        def _resolve_video(vid_name: str) -> str:
+            local_vid = config.PROJECT_ROOT / "videos" / vid_name
+            if local_vid.exists():
+                return str(local_vid)
+            ext_vid = Path("/Users/yashwantankatwar/Documents/DRIVE E/COLLEGE/COLLEGE/HACKATHON/sih 2026/v4/IBVAP_Datasets/dataset_for_test") / vid_name
+            if ext_vid.exists():
+                return str(ext_vid)
+            for alt in ["worker-zone-detection.mp4", "night_movement.mp4", "sih_video.mov", "2024-04-24 10-35-00.mp4", "video6.mp4", "bop1_visdrone_aerial.mp4", "bop3_indian_checkpoint_traffic.mp4"]:
+                alt_path = config.PROJECT_ROOT / "videos" / alt
+                if alt_path.exists():
+                    return str(alt_path)
+            return str(local_vid)
 
-        # For the 6 human/behavioral test features, run ONLY DEMO-01 with its designated video.
-        # Remove all other auxiliary videos (DEMO-02, DEMO-03) from these 6 sections.
-        six_single_cam_features = {
+        video_path = _resolve_video(demo_vid)
+
+        # For the single-camera test features, run ONLY DEMO-01 with its designated video.
+        # Remove all other auxiliary videos (DEMO-02, DEMO-03) from these sections.
+        single_cam_features = {
             "human_detection",
             "human_tracking",
+            "virtual_fence",
             "tripwire",
             "loitering",
             "sudden_movement",
             "group_incursion",
         }
 
-        if self.feature_id in six_single_cam_features:
+        if self.feature_id == "virtual_fence":
+            from zones import Zone
+            from lines import Line
+            vf_zones = [
+                Zone(
+                    name="restricted_zone",
+                    zone_type="restricted",
+                    polygon_norm=[[0.0, 0.0], [0.55, 0.0], [0.55, 1.0], [0.0, 1.0]],
+                    severity="HIGH",
+                    max_dwell_seconds=5,
+                    max_objects=3,
+                ),
+                Zone(
+                    name="pedestrian_lane",
+                    zone_type="monitored",
+                    polygon_norm=[[0.55, 0.0], [1.0, 0.0], [1.0, 1.0], [0.55, 1.0]],
+                    severity="LOW",
+                    max_objects=3,
+                    allowed_classes=["person"],
+                ),
+            ]
+            vf_lines = [
+                Line(
+                    name="boundary_line",
+                    point_a_norm=(0.55, 0.0),
+                    point_b_norm=(0.55, 1.0),
+                    side_a_label="RESTRICTED",
+                    side_b_label="MONITORED",
+                )
+            ]
+            demo_configs = {
+                "DEMO-01": {
+                    "name": f"DEMO-01 ({self.feature_meta['name']})",
+                    "source": str(video_path),
+                    "anpr_enabled": False,
+                    "face_enabled": False,
+                    "night_enabled": False,
+                    "zones": vf_zones,
+                    "lines": vf_lines,
+                }
+            }
+        elif self.feature_id in single_cam_features:
             demo_configs = {
                 "DEMO-01": {
                     "name": f"DEMO-01 ({self.feature_meta['name']})",
@@ -328,36 +373,110 @@ class DemoSession:
                     "night_enabled": False,
                 }
             }
+        elif self.feature_id == "vehicle_classification":
+            demo_configs = {
+                "DEMO-01": {
+                    "name": "DEMO-01 (Traffic Highway 1)",
+                    "source": _resolve_video("2024-04-24 10-35-00.mp4"),
+                    "anpr_enabled": False,
+                    "face_enabled": False,
+                    "night_enabled": False,
+                },
+                "DEMO-02": {
+                    "name": "DEMO-02 (Traffic Intersection 2)",
+                    "source": _resolve_video("video6.mp4"),
+                    "anpr_enabled": False,
+                    "face_enabled": False,
+                    "night_enabled": False,
+                },
+                "DEMO-03": {
+                    "name": "DEMO-03 (Border Road 3)",
+                    "source": _resolve_video("sih_video.mov"),
+                    "anpr_enabled": False,
+                    "face_enabled": False,
+                    "night_enabled": False,
+                },
+            }
+        elif self.feature_id == "anpr":
+            demo_configs = {
+                "DEMO-01": {
+                    "name": "DEMO-01 (ANPR Primary · HSRP)",
+                    "source": _resolve_video("sih_video.mov"),
+                    "anpr_enabled": True,
+                    "face_enabled": False,
+                    "night_enabled": False,
+                },
+                "DEMO-02": {
+                    "name": "DEMO-02 (ANPR Auxiliary · Lane 2)",
+                    "source": _resolve_video("2024-04-24 10-35-00.mp4"),
+                    "anpr_enabled": True,
+                    "face_enabled": False,
+                    "night_enabled": False,
+                },
+                "DEMO-03": {
+                    "name": "DEMO-03 (ANPR Auxiliary · Lane 3)",
+                    "source": _resolve_video("video6.mp4"),
+                    "anpr_enabled": True,
+                    "face_enabled": False,
+                    "night_enabled": False,
+                },
+            }
+        elif self.feature_id == "face_recognition":
+            demo_configs = {
+                "DEMO-01": {
+                    "name": "DEMO-01 (Face Recognition · Portal 1)",
+                    "source": _resolve_video("output (1).mp4"),
+                    "anpr_enabled": False,
+                    "face_enabled": True,
+                    "night_enabled": False,
+                },
+                "DEMO-02": {
+                    "name": "DEMO-02 (Face Recognition · Portal 2)",
+                    "source": _resolve_video("output.mp4"),
+                    "anpr_enabled": False,
+                    "face_enabled": True,
+                    "night_enabled": False,
+                },
+            }
+        elif self.feature_id == "night_movement":
+            demo_configs = {
+                "DEMO-02": {
+                    "name": "DEMO-02 (Night Movement Target · Thermal)",
+                    "source": _resolve_video("night_movement.mp4"),
+                    "anpr_enabled": False,
+                    "face_enabled": False,
+                    "night_enabled": True,
+                },
+            }
         else:
             demo_configs = {
                 "DEMO-01": {
                     "name": "DEMO-01 (Sector North · Recon)",
-                    "source": str(video_path if primary_cam in ("DEMO-01", "BOP-01") else config.PROJECT_ROOT / "videos" / "bop1_visdrone_aerial.mp4"),
-                    "anpr_enabled": (self.feature_id == "anpr"),
-                    "face_enabled": (self.feature_id == "face_recognition"),
+                    "source": str(video_path if primary_cam in ("DEMO-01", "BOP-01") else _resolve_video("bop1_visdrone_aerial.mp4")),
+                    "anpr_enabled": False,
+                    "face_enabled": False,
                     "night_enabled": False,
                 },
                 "DEMO-02": {
                     "name": "DEMO-02 (Sector East · Thermal/Portal)",
-                    "source": str(video_path if primary_cam in ("DEMO-02", "BOP-02") else (
-                        config.PROJECT_ROOT / "videos" / "face_chokepoint_p2e_s5_c1.mp4"
-                        if self.feature_id == "face_recognition"
-                        else config.PROJECT_ROOT / "videos" / "bop2_kaist_night_thermal.mp4"
-                    )),
-                    "anpr_enabled": (self.feature_id == "anpr"),
-                    "face_enabled": (self.feature_id == "face_recognition"),
+                    "source": str(video_path if primary_cam in ("DEMO-02", "BOP-02") else _resolve_video("bop2_kaist_night_thermal.mp4")),
+                    "anpr_enabled": False,
+                    "face_enabled": False,
                     "night_enabled": (self.feature_id == "night_movement"),
                 },
                 "DEMO-03": {
                     "name": "DEMO-03 (BOP Checkpoint & Gate)",
-                    "source": str(video_path if primary_cam in ("DEMO-03", "BOP-03") else config.PROJECT_ROOT / "videos" / "bop3_indian_checkpoint_traffic.mp4"),
-                    "anpr_enabled": (self.feature_id == "anpr" or True),
-                    "face_enabled": (self.feature_id == "face_recognition"),
+                    "source": str(video_path if primary_cam in ("DEMO-03", "BOP-03") else _resolve_video("bop3_indian_checkpoint_traffic.mp4")),
+                    "anpr_enabled": True,
+                    "face_enabled": False,
                     "night_enabled": False,
                 },
             }
 
-        worker_conf = 0.18 if self.feature_id in six_single_cam_features else config.CONFIDENCE_THRESHOLD
+        worker_conf = (
+            0.12 if self.feature_id == "face_recognition"
+            else (0.18 if (self.feature_id in single_cam_features or self.feature_id in ("anpr", "vehicle_detection", "vehicle_classification")) else config.CONFIDENCE_THRESHOLD)
+        )
         for cam_id, cfg in demo_configs.items():
             worker = CameraWorker(
                 camera_id=cam_id,
@@ -368,6 +487,8 @@ class DemoSession:
                 face_enabled=cfg.get("face_enabled", False),
                 name=cfg["name"],
                 purpose=f"Feature Demonstration: {self.feature_meta['name']}",
+                zones=cfg.get("zones"),
+                lines=cfg.get("lines"),
             )
             # If camera tamper demo, trigger a demonstration tamper condition on DEMO-03
             if self.feature_id == "camera_tamper" and cam_id == "DEMO-03":
@@ -394,6 +515,24 @@ class DemoSession:
                     ev_sub_kind = getattr(ev, "kind", "")
                     cls_name = type(ev).__name__
 
+                    # Construct comprehensive searchable token space across all attributes
+                    searchable_parts = [
+                        ev_type,
+                        ev_kind,
+                        ev_sub_kind,
+                        cls_name,
+                        getattr(ev, "resulting_event", ""),
+                        getattr(ev, "tamper_type", ""),
+                        getattr(ev, "action", ""),
+                        getattr(ev, "threshold_crossed", ""),
+                        getattr(ev, "direction", ""),
+                        getattr(ev, "object_type", ""),
+                        getattr(ev, "description", ""),
+                        getattr(ev, "reason", ""),
+                        " ".join(str(r) for r in getattr(ev, "reasons", []) if isinstance(r, (str, int, float))),
+                    ]
+                    combined_text = " ".join(str(p).upper() for p in searchable_parts if p)
+
                     # Check if event matches target capability criteria
                     is_match = False
                     if not expected_types:
@@ -401,28 +540,31 @@ class DemoSession:
                     else:
                         for exp in expected_types:
                             exp_u = exp.upper()
-                            if (exp_u in ev_type.upper() or 
-                                exp_u in ev_kind.upper() or 
-                                exp_u in ev_sub_kind.upper() or
-                                exp_u in cls_name.upper() or
-                                (exp_u == "TRACK" and cls_name == "TrackEvent")):
+                            if exp_u in combined_text or (exp_u == "TRACK" and "TRACK" in combined_text):
                                 is_match = True
                                 break
 
                     if not is_match:
                         continue
 
-                    # Deduplication: do not spam the event list with duplicate detections for the same track
+                    # Deduplication: do not spam the event list with rapid per-frame duplicates (2.5s window)
                     now = time.time()
                     tid = getattr(ev, "track_id", "")
-                    zone = getattr(ev, "zone", "")
-                    sig = (ev_type, str(tid), str(zone))
-                    if sig in seen_events and (now - seen_events[sig]) < 8.0:
+                    zone = getattr(ev, "zone", getattr(ev, "line", ""))
+                    eid = getattr(ev, "event_id", "")
+                    sub = getattr(ev, "resulting_event", getattr(ev, "tamper_type", getattr(ev, "kind", getattr(ev, "action", ""))))
+                    sig = (ev_type, str(sub), str(tid), str(zone))
+                    if eid:
+                        if eid in seen_events and (now - seen_events[eid]) < 2.5:
+                            continue
+                        seen_events[eid] = now
+                    elif sig in seen_events and (now - seen_events[sig]) < 2.5:
                         continue
                     seen_events[sig] = now
 
                     with self._lock:
                         self.collected_events.append(ev)
+                        self.total_events_collected += 1
                 except Exception:
                     pass
 
@@ -432,7 +574,7 @@ class DemoSession:
     def get_worker(self, camera_id: str) -> Optional[CameraWorker]:
         return self.demo_workers.get(camera_id)
 
-    def get_events(self, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_events(self, limit: int = 500) -> List[Dict[str, Any]]:
         with self._lock:
             raw_list = list(self.collected_events)[-limit:]
         output = []
@@ -443,8 +585,82 @@ class DemoSession:
                 d = {k: v for k, v in ev.__dict__.items() if not k.startswith("_")}
             else:
                 d = {"detail": str(ev)}
-            if "event_type" not in d or not d["event_type"]:
-                d["event_type"] = getattr(ev, "kind", getattr(ev, "event_type", type(ev).__name__))
+
+            ev_cls = type(ev).__name__
+            ev_type = d.get("event_type") or getattr(ev, "kind", getattr(ev, "event_type", ev_cls))
+            d["event_type"] = ev_type
+
+            # Provide human-readable summary and severity if missing
+            if not d.get("summary"):
+                if ev_cls == "SuddenMovementEvent":
+                    spd = d.get("current_velocity", 0.0)
+                    acc = d.get("acceleration", 0.0)
+                    direct = d.get("direction", "forward")
+                    rel = d.get("boundary_relationship", "").replace("_", " ").lower()
+                    d["summary"] = f"Sudden acceleration / running detected: {spd:.0f} px/s ({acc:.0f} px/s^2, {direct}) {rel}"
+                    d["severity"] = d.get("severity") or "HIGH"
+                elif ev_cls == "CameraTamperEvent":
+                    t_type = d.get("tamper_type", "TAMPER")
+                    reason = d.get("reason", "Sensor obscured")
+                    d["summary"] = f"Camera optical tamper: {t_type} ({reason})"
+                    d["severity"] = "CRITICAL"
+                elif ev_cls == "GroupIncursionEvent":
+                    cnt = d.get("count", len(d.get("track_ids", [])))
+                    z = d.get("zone", "perimeter")
+                    d["summary"] = f"Group incursion detected: {cnt} simultaneous targets inside '{z}'"
+                    d["severity"] = "HIGH"
+                elif ev_cls == "LineCrossingEvent":
+                    ln = d.get("line", "perimeter")
+                    obj = d.get("object_type", "Target")
+                    crossing = d.get("direction") or f"{d.get('from_label','')} -> {d.get('to_label','')}"
+                    d["summary"] = f"Perimeter breach: {obj} crossed '{ln}' ({crossing})"
+                    d["severity"] = d.get("severity") or "HIGH"
+                elif ev_cls == "DwellEvent":
+                    z = d.get("zone", "restricted zone")
+                    dw = d.get("current_dwell_time", 0.0)
+                    th = d.get("threshold_crossed", "LOITERING")
+                    d["summary"] = f"{th} threshold reached in '{z}': {dw:.1f}s occupancy"
+                    d["severity"] = "CRITICAL" if th == "CRITICAL" else "HIGH"
+                elif ev_cls == "NightMovementEvent":
+                    z = d.get("zone", "zone")
+                    lum = d.get("luminance", 0.0)
+                    spd = d.get("speed", 0.0)
+                    d["summary"] = f"Low-light movement in '{z}' (scene luminance {lum:.0f}/255, speed {spd:.0f} px/s)"
+                    d["severity"] = "HIGH"
+                elif ev_cls == "ANPREvent":
+                    plate = d.get("plate_text", "")
+                    st = d.get("state_name", "")
+                    conf = d.get("confidence", 0.0)
+                    d["summary"] = f"ANPR plate captured: {plate} [{st}] ({conf*100:.0f}% confidence)"
+                    d["license_plate"] = plate
+                    d["severity"] = "INFO"
+                elif ev_cls == "FaceRecognitionEvent":
+                    ident = d.get("identity", "Unknown")
+                    known = d.get("is_known", False)
+                    conf = d.get("confidence", 0.0)
+                    d["summary"] = f"Facial recognition: {ident} ({'MATCHED' if known else 'UNKNOWN'}, {conf*100:.0f}%)"
+                    d["person_name"] = ident
+                    d["watchlist_status"] = "MATCH" if known else "UNKNOWN"
+                    d["severity"] = "HIGH" if known else "MEDIUM"
+                elif ev_cls == "IncidentEvent":
+                    inc_id = d.get("incident_id", "")
+                    score = d.get("risk_score", 0)
+                    reasons_str = "; ".join(d.get("reasons", []))
+                    d["summary"] = f"Correlated incident #{inc_id} (Score {score}/100): {reasons_str}"
+                    d["severity"] = d.get("severity") or "HIGH"
+                elif ev_cls == "RiskEvent":
+                    score = d.get("risk_score", 0)
+                    reasons_str = "; ".join(d.get("reasons", []))
+                    d["summary"] = f"Risk alert ({score}/100): {reasons_str}"
+                    d["severity"] = d.get("risk_level") or "MEDIUM"
+                elif ev_cls == "ZoneEvent":
+                    obj = d.get("object_type", "Target")
+                    k = d.get("kind", "ZONE_ENTER")
+                    z = d.get("zone", "zone")
+                    dw = d.get("dwell_seconds", 0.0)
+                    d["summary"] = f"{obj} {k} — '{z}'" + (f" ({dw:.1f}s dwell)" if dw > 0 else "")
+                    d["severity"] = "HIGH" if d.get("zone_type") == "restricted" else "LOW"
+
             output.append(d)
         return output
 

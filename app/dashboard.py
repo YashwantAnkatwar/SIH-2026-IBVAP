@@ -303,10 +303,11 @@ def create_app(camera_manager):
 
     @app.route("/api/test-center/events")
     def api_test_center_events():
-        limit = request.args.get("limit", default=50, type=int)
+        limit = request.args.get("limit", default=500, type=int)
         session = test_center_manager.get_active_session()
         events = session.get_events(limit=limit) if session else []
-        return jsonify({"events": events, "count": len(events)})
+        total_cnt = getattr(session, "total_events_collected", len(events)) if session else 0
+        return jsonify({"events": events, "count": total_cnt, "total_count": total_cnt})
 
     @app.route("/api/test-center/complete-demo/start", methods=["POST"])
     def api_test_center_complete_demo_start():
