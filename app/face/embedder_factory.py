@@ -25,15 +25,17 @@ def create_embedder(name: str):
         return Embedder()
 
     if key in _DEEP_NAMES:
-        # NOTE: "arcface"/"insightface" are accepted as config values
-        # for forward-compatibility with the brief's own example
-        # (FACE_EMBEDDER=arcface), but the actual deep backend
-        # implemented in this build is FaceNet/VGGFace2
-        # (embedder_deep.DeepEmbedder) -- see that module's docstring
-        # for why, and for what would need to change to genuinely swap
-        # in ArcFace/insightface later.
-        from face.embedder_deep import DeepEmbedder
-        return DeepEmbedder()
+        try:
+            from face.embedder_deep import DeepEmbedder
+            return DeepEmbedder()
+        except Exception as e:
+            import logging
+            logging.getLogger("ibvap.face").warning(
+                "DeepEmbedder unavailable (%s: %s). Falling back to classical LBP embedder.",
+                type(e).__name__, e
+            )
+            from face.embedder import Embedder
+            return Embedder()
 
     raise ValueError(
         f"Unknown FACE_EMBEDDER backend {name!r}. "
