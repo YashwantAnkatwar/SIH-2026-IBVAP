@@ -73,10 +73,31 @@ def create_app(camera_manager):
 
     @app.route("/")
     def index():
+        if getattr(config, "RESET_ON_REFRESH", True):
+            try:
+                shared.alert_manager.clear()
+                shared.correlator.clear()
+                event_bus.clear()
+                camera_manager.reset_alerts()
+                shared.event_store.clear()
+            except Exception:
+                pass
         return render_template(
             "dashboard.html",
             camera_ids=list(camera_manager.workers.keys()),
         )
+
+    @app.route("/api/system/reset", methods=["POST"])
+    def api_system_reset():
+        try:
+            shared.alert_manager.clear()
+            shared.correlator.clear()
+            event_bus.clear()
+            camera_manager.reset_alerts()
+            shared.event_store.clear()
+            return jsonify({"status": "SUCCESS", "message": "Alert counters and events reset from scratch (0)"})
+        except Exception as e:
+            return jsonify({"status": "ERROR", "message": str(e)}), 500
 
     # ------------------------------------------------------------------
     # Live status / events / video

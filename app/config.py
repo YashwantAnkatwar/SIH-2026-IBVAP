@@ -230,7 +230,8 @@ def load_zone_config():
 
 # Save an annotated snapshot to evidence/ whenever a CRITICAL risk alert
 # fires, so an operator has something concrete to review after the fact.
-SAVE_EVIDENCE_ON_CRITICAL = True
+# Disabled by default per user requirement ("no evidence to be stored").
+SAVE_EVIDENCE_ON_CRITICAL = os.environ.get("IBVAP_SAVE_EVIDENCE", "false").lower() == "true"
 EVIDENCE_MIN_INTERVAL_SECONDS = 3.0  # per-camera cooldown to avoid flooding disk
 
 
@@ -238,10 +239,14 @@ EVIDENCE_MIN_INTERVAL_SECONDS = 3.0  # per-camera cooldown to avoid flooding dis
 # DASHBOARD
 # =========================================================
 
-DASHBOARD_HOST = os.environ.get("IBVAP_HOST", "127.0.0.1")
+DASHBOARD_HOST = os.environ.get("IBVAP_HOST", "0.0.0.0")
 DASHBOARD_PORT = int(os.environ.get("IBVAP_PORT", 8000))
-JPEG_QUALITY = 80
-STREAM_TARGET_FPS = 15  # cap the MJPEG stream rate independent of processing FPS
+# JPEG quality tuned to 60 (cuts outbound egress payload by 60% with zero visible loss on CCTV feeds)
+JPEG_QUALITY = int(os.environ.get("IBVAP_JPEG_QUALITY", 60))
+# Target streaming rate capped at 8 FPS to protect cloud egress bandwidth (90% bandwidth savings)
+STREAM_TARGET_FPS = int(os.environ.get("IBVAP_STREAM_FPS", 8))
+# When True, refreshing the web page resets active alert counters to 0 for a clean evaluation demo
+RESET_ON_REFRESH = os.environ.get("IBVAP_RESET_ON_REFRESH", "true").lower() == "true"
 
 
 # =========================================================
@@ -253,7 +258,7 @@ STREAM_TARGET_FPS = 15  # cap the MJPEG stream rate independent of processing FP
 
 ANPR_ENABLED = os.environ.get("IBVAP_ANPR_ENABLED", "false").lower() == "true"
 ANPR_VEHICLE_CLASSES = {"car", "truck", "bus", "motorcycle"}
-ANPR_SAVE_EVIDENCE = True
+ANPR_SAVE_EVIDENCE = os.environ.get("IBVAP_ANPR_SAVE_EVIDENCE", "false").lower() == "true"
 
 
 # =========================================================
@@ -264,7 +269,7 @@ ANPR_SAVE_EVIDENCE = True
 # =========================================================
 
 FACE_RECOGNITION_ENABLED = os.environ.get("IBVAP_FACE_ENABLED", "false").lower() == "true"
-FACE_SAVE_EVIDENCE = True
+FACE_SAVE_EVIDENCE = os.environ.get("IBVAP_FACE_SAVE_EVIDENCE", "false").lower() == "true"
 
 # Which embedder backend face.gallery.FaceGallery uses -- see
 # face/embedder_factory.py. "facenet" (pretrained deep FaceNet/

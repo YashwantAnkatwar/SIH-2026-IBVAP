@@ -58,6 +58,16 @@ class CameraManager:
         worker.resume()
         return True
 
+    def reset_alerts(self):
+        """Reset per-worker active alerts, dwell timers, and cached track alerts."""
+        for worker in self.workers.values():
+            worker.active_alerts = []
+            if hasattr(worker, "zone_mgr") and hasattr(worker.zone_mgr, "dwell_tracker"):
+                try:
+                    worker.zone_mgr.dwell_tracker.clear()
+                except Exception:
+                    pass
+
     def stop_camera(self, camera_id):
         worker = self.workers.get(camera_id)
         if worker is None:

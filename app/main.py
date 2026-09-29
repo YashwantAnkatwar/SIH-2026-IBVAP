@@ -55,6 +55,14 @@ def main():
         details=f"IBVAP edge appliance online. Initialized {len(CAMERAS)} camera streams.",
     )
 
+    # Start storage sentinel watchdog thread (prevents disk full and keeps system alive indefinitely)
+    try:
+        from storage_watchdog import start_watchdog
+        start_watchdog()
+        print("[✓] Storage resilience watchdog daemon active (30GB VM disk protection online).")
+    except Exception as e:
+        print(f"[!] Storage watchdog notice: {e}")
+
     print(f"{len(CAMERAS)} camera worker(s) starting...")
     print(f"Dashboard: http://{DASHBOARD_HOST}:{DASHBOARD_PORT}")
     print(f"Event history DB: {EVENTS_DB_PATH}")

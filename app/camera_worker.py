@@ -455,7 +455,7 @@ class CameraWorker:
 
                     # Save evidence frame for the tamper event
                     tamper_evidence_file = None
-                    if is_type_change or not hasattr(self, "_last_tamper_evidence_time") or (timestamp - getattr(self, "_last_tamper_evidence_time", 0)) > 15.0:
+                    if config.SAVE_EVIDENCE_ON_CRITICAL and (is_type_change or not hasattr(self, "_last_tamper_evidence_time") or (timestamp - getattr(self, "_last_tamper_evidence_time", 0)) > 15.0):
                         self._last_tamper_evidence_time = timestamp
                         try:
                             tamper_dir = config.EVIDENCE_DIR / "tamper"

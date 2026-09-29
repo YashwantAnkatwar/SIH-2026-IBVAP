@@ -393,6 +393,11 @@
       🔊 Sound: ON
     </button>
 
+    <!-- Reset Demo Counters -->
+    <button class="btn-ctrl" onclick="resetDemoCounters()" style="font-size:11px; border-color:var(--cyan); color:var(--cyan);" title="Restart alerts and event counters from 0">
+      🔄 Reset (0)
+    </button>
+
     <!-- Global Confidence -->
     <span style="display:flex; align-items:center; gap:6px; color:var(--dim); font-size:12px;">
       Conf:
@@ -1352,6 +1357,15 @@ async function refreshSystem(){
       banner.classList.remove('active');
     }
   } catch(e){}
+}
+
+async function resetDemoCounters(){
+  try{
+    await fetch('/api/system/reset', {method:'POST'});
+    await refreshSystem();
+    await refreshEvents();
+    if(typeof refreshAlertsTab === 'function') refreshAlertsTab();
+  }catch(e){}
 }
 
 async function refreshEvents(){
@@ -2715,7 +2729,70 @@ async function stopDemoSession() {
   if (cardsContainer) cardsContainer.style.display = 'grid';
   if (btn) btn.disabled = false;
 }
+
+/* ==========================================================================
+   CLOUD BANDWIDTH SAVER & AUTO-SLEEP SENTINEL (GCP VM Egress Protection)
+   Pauses MJPEG streaming when tab is minimized or user is idle for 5 minutes.
+   ========================================================================== */
+let isStreamPausedForBandwidth = false;
+let userIdleTimer = null;
+const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+
+function pauseLiveStreamsForBandwidth() {
+  if (isStreamPausedForBandwidth) return;
+  isStreamPausedForBandwidth = true;
+  document.querySelectorAll('.camera-card .feed-wrap img').forEach(img => {
+    if (!img.dataset.streamSrc && img.src && img.src.includes('/video_feed/')) {
+      img.dataset.streamSrc = img.src.split('?')[0];
+    }
+    img.src = '';
+  });
+  const banner = document.getElementById('bandwidth-saver-badge');
+  if (banner) banner.style.display = 'flex';
+}
+
+function resumeLiveStreamsFromBandwidth() {
+  if (!isStreamPausedForBandwidth) return;
+  isStreamPausedForBandwidth = false;
+  document.querySelectorAll('.camera-card .feed-wrap img').forEach(img => {
+    if (img.dataset.streamSrc) {
+      img.src = img.dataset.streamSrc + '?t=' + Date.now();
+    }
+  });
+  const banner = document.getElementById('bandwidth-saver-badge');
+  if (banner) banner.style.display = 'none';
+  resetIdleTimer();
+}
+
+function resetIdleTimer() {
+  if (userIdleTimer) clearTimeout(userIdleTimer);
+  if (isStreamPausedForBandwidth && document.visibilityState === 'visible') {
+    resumeLiveStreamsFromBandwidth();
+  }
+  userIdleTimer = setTimeout(() => {
+    pauseLiveStreamsForBandwidth();
+  }, IDLE_LIMIT_MS);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    pauseLiveStreamsForBandwidth();
+  } else {
+    resumeLiveStreamsFromBandwidth();
+  }
+});
+
+['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach(evt => {
+  window.addEventListener(evt, resetIdleTimer, { passive: true });
+});
+
+resetIdleTimer();
 </script>
+
+<div id="bandwidth-saver-badge" onclick="resumeLiveStreamsFromBandwidth()" style="display:none; position:fixed; bottom:20px; right:20px; background:rgba(15,23,42,0.95); border:1px solid var(--cyan); color:#e2e8f0; padding:10px 18px; border-radius:8px; z-index:99999; font-size:12px; box-shadow:0 8px 30px rgba(0,0,0,0.8); cursor:pointer; align-items:center; gap:8px;">
+  <span>💤 <b>Video Streams Sleeping</b> (Bandwidth Saver Active)</span>
+  <span style="background:var(--cyan); color:#000; padding:2px 8px; border-radius:4px; font-weight:700; font-size:11px;">Click to Resume</span>
+</div>
 
 </body>
 </html>

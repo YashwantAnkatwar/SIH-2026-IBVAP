@@ -79,6 +79,11 @@ class EventCorrelator:
         self._lock = threading.Lock()
         self._incidents: Dict[str, Incident] = {}
 
+    def clear(self):
+        """Reset all active tactical incidents."""
+        with self._lock:
+            self._incidents.clear()
+
     def correlate(
         self,
         camera_id: str,

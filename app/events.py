@@ -333,6 +333,11 @@ class EventBus:
         items.reverse()  # newest first
         return [asdict(e) for e in items]
 
+    def clear(self):
+        """Reset recent event history buffer."""
+        with self._lock:
+            self._events.clear()
+
 
 # A single process-wide bus shared by all camera workers and the dashboard.
 event_bus = EventBus()

@@ -128,6 +128,12 @@ class AlertManager:
         for alert in ordered[: len(self._alerts) - self.history_limit]:
             self._alerts.pop(alert.id, None)
 
+    def clear(self):
+        """Reset all in-memory alerts and dedup index (e.g. on page refresh or explicit reset)."""
+        with self._lock:
+            self._alerts.clear()
+            self._dedup_index.clear()
+
     # ------------------------------------------------------------------
     # Operator actions
     # ------------------------------------------------------------------

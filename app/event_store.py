@@ -242,7 +242,44 @@ class EventStore:
                 (ts, iso, camera_id, track_id, object_type, zone, event_type,
                  severity, confidence, description, extra_json),
             )
-            return cur.lastrowid
+            row_id = cur.lastrowid
+
+        # Self-prune periodically so the database never balloons disk storage
+        self._insert_count = getattr(self, "_insert_count", 0) + 1
+        if self._insert_count % 250 == 0:
+            try:
+                self.prune_old_events(max_keep=3000)
+            except Exception:
+                pass
+
+        return row_id
+
+    def clear(self):
+        """Reset all event history from the database (starts count from 0)."""
+        with self._cursor(commit=True) as cur:
+            cur.execute("DELETE FROM events")
+            try:
+                cur.execute("DELETE FROM sqlite_sequence WHERE name='events'")
+            except Exception:
+                pass
+            try:
+                cur.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            except Exception:
+                pass
+
+    def prune_old_events(self, max_keep=2000):
+        """Keep only the latest max_keep events to prevent database bloat and disk full."""
+        with self._cursor(commit=True) as cur:
+            cur.execute("""
+                DELETE FROM events 
+                WHERE id NOT IN (
+                    SELECT id FROM events ORDER BY id DESC LIMIT ?
+                )
+            """, (max_keep,))
+            try:
+                cur.execute("PRAGMA wal_checkpoint(PASSIVE)")
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------
     # Reading / filtering (Phase 9)

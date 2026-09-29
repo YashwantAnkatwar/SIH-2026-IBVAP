@@ -3,7 +3,7 @@
 # 🛡️ IBVAP · Integrated Border Video Analytics Platform
 ### *AI-Based Intelligent Video Analytics Platform for Border Surveillance using Existing CCTV Infrastructure*
 
-[![Live Prototype](https://img.shields.io/badge/🌐%20Live%20Prototype-Online%20(Port%208000)-00ffcc?style=for-the-badge&logo=googlechrome&logoColor=black)](http://34.93.16.54:8000/)
+[![Live Prototype](https://img.shields.io/badge/🌐%20Live%20Prototype-Online%20(Port%208000)-00ffcc?style=for-the-badge&logo=googlechrome&logoColor=black)](http://8.234.88.96:8000/)
 [![SIH 2026](https://img.shields.io/badge/Smart%20India%20Hackathon-SIH%202026%20%7C%20%23SIH26187-orange?style=for-the-badge&logo=target)](https://www.sih.gov.in/)
 [![Tests Passing](https://img.shields.io/badge/Tests-214%2F214%20Passing%20(100%25)-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
 [![Python Version](https://img.shields.io/badge/Python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
@@ -17,12 +17,12 @@
 
 ---
 
-### 🌐 [Click Here to Access the Live Cloud Prototype (http://34.93.16.54:8000/)](http://34.93.16.54:8000/)
+### 🌐 [Click Here to Access the Live Cloud Prototype (http://8.234.88.96:8000/)](http://8.234.88.96:8000/)
 
 <br>
 
 <p align="center">
-  <img src="assets/dashboard_overview.png" alt="IBVAP Tactical Command Console" width="95%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); border: 1px solid #1f293d;">
+  <img src="./assets/dashboard_overview.png" alt="IBVAP Tactical Command Console" width="100%">
 </p>
 
 > 💡 **Notice the "TEST ALL FEATURES" button in the top right?**  
@@ -91,7 +91,7 @@ India’s borders traverse thousands of kilometers of rugged terrain—from the 
 ## 🌐 Live Cloud Prototype & Interactive Test Center
 
 ### Instant Cloud Access
-* **Live Server**: **[http://34.93.16.54:8000/](http://34.93.16.54:8000/)**
+* **Live Server**: **[http://8.234.88.96:8000/](http://8.234.88.96:8000/)**
 * **Preloaded Demo Cameras**:
   - `BOP-01` (Sector North): Aerial Perimeter Drone Patrol (VisDrone surveillance dataset).
   - `BOP-02` (Sector East): Night-Vision Thermal Reconnaissance (KAIST multispectral infrared).
@@ -384,7 +384,7 @@ pip install -r requirements.txt
 # Start the server and camera workers
 python run.py
 ```
-Open **`http://127.0.0.1:8000`** in your browser.
+Open **`http://8.234.88.96:8000/`** in your browser.
 
 ### 4. Running as a Production Background Service
 ```bash
@@ -467,6 +467,6 @@ python3 -m pytest -q
 ### 🏆 Team SeemaDrishti · Smart India Hackathon 2026
 *Protecting the Nation's Borders through Sovereign, Scalable Artificial Intelligence.*
 
-**[🌐 Experience the Live Prototype at http://34.93.16.54:8000/](http://34.93.16.54:8000/)**
+**[🌐 Experience the Live Prototype at http://8.234.88.96:8000/](http://8.234.88.96:8000/)**
 
 </div>

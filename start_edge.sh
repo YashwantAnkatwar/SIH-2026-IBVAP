@@ -27,15 +27,15 @@ else
 fi
 
 # 2. Check Core Model Weights
-MODEL_PATH="models/yolov8n.pt"
-if [ ! -f "$MODEL_PATH" ]; then
+MODEL_PATH="app/yolo26n.pt"
+if [ ! -f "$MODEL_PATH" ] && [ ! -f "models/yolov8n.pt" ]; then
     echo "[!] Model weight not found at $MODEL_PATH"
-    echo "[*] Downloading YOLOv8n base weights..."
-    mkdir -p models
+    echo "[*] Downloading YOLO base weights..."
+    mkdir -p app models
     curl -L -o "$MODEL_PATH" "https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8n.pt"
-    echo "[✓] YOLOv8n weights downloaded successfully."
+    echo "[✓] YOLO weights downloaded successfully."
 else
-    echo "[✓] YOLOv8 neural network weights verified ($MODEL_PATH)."
+    echo "[✓] YOLO neural network weights verified."
 fi
 
 # 3. Check OCR Engine (Tesseract) for ANPR
@@ -45,13 +45,17 @@ else
     echo "[!] WARNING: Tesseract OCR binary not found in PATH. ANPR will use fallback mode."
 fi
 
-# 4. Verify Directory Structure
-mkdir -p data/evidence data/audit config
-echo "[✓] Persistent database and evidence directories ready."
+# 4. Configure Cloud & Bandwidth Optimization Flags (3-Month VM Survival)
+export IBVAP_HOST="${IBVAP_HOST:-0.0.0.0}"
+export IBVAP_PORT="${IBVAP_PORT:-8000}"
+export IBVAP_SAVE_EVIDENCE="${IBVAP_SAVE_EVIDENCE:-false}"
+export IBVAP_JPEG_QUALITY="${IBVAP_JPEG_QUALITY:-60}"
+export IBVAP_STREAM_FPS="${IBVAP_STREAM_FPS:-8}"
+export IBVAP_RESET_ON_REFRESH="${IBVAP_RESET_ON_REFRESH:-true}"
 
 # 5. Launch IBVAP Server
 echo ""
 echo "[*] Starting IBVAP Multi-Camera Surveillance Appliance..."
-echo "[*] Web Console: http://127.0.0.1:8000"
+echo "[*] Web Console: http://0.0.0.0:${IBVAP_PORT}"
 echo "=================================================================="
 exec "$PYTHON_EXEC" run.py
