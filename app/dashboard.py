@@ -918,13 +918,26 @@ def create_app(camera_manager):
 
 
 def _mjpeg_generator(worker):
-    frame_interval = 1.0 / config.STREAM_TARGET_FPS
+    frame_interval = 1.0 / max(1, config.STREAM_TARGET_FPS)
     last_sent = 0.0
-
+    start_time = time.time()
+    # Hard server-side safety limit: auto-terminate stream after 90 seconds continuous broadcast
+    # to protect cloud egress bandwidth even if a browser/bot leaves the TCP connection open.
     while getattr(worker, "running", True):
-        jpeg = worker.get_latest_jpeg()
         now = time.time()
+        # When connection exceeds max_duration (e.g. idle unattended tab), throttle to 1 frame every 4 seconds
+        # (99.5% bandwidth reduction, ~0.02 MB/s) while keeping the stream healthy without Chrome broken image errors.
+        if (now - start_time) > max_duration:
+            time.sleep(4.0)
+            jpeg = worker.get_latest_jpeg()
+            if jpeg is not None:
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n"
+                )
+            continue
 
+        jpeg = worker.get_latest_jpeg()
         if jpeg is not None and (now - last_sent) >= frame_interval:
             last_sent = now
             yield (

@@ -241,10 +241,12 @@ EVIDENCE_MIN_INTERVAL_SECONDS = 3.0  # per-camera cooldown to avoid flooding dis
 
 DASHBOARD_HOST = os.environ.get("IBVAP_HOST", "0.0.0.0")
 DASHBOARD_PORT = int(os.environ.get("IBVAP_PORT", 8000))
-# JPEG quality tuned to 60 (cuts outbound egress payload by 60% with zero visible loss on CCTV feeds)
-JPEG_QUALITY = int(os.environ.get("IBVAP_JPEG_QUALITY", 60))
-# Target streaming rate capped at 8 FPS to protect cloud egress bandwidth (90% bandwidth savings)
-STREAM_TARGET_FPS = int(os.environ.get("IBVAP_STREAM_FPS", 8))
+# JPEG quality tuned to 50 (sharp CCTV edges, cuts outbound egress payload by 75%)
+JPEG_QUALITY = int(os.environ.get("IBVAP_JPEG_QUALITY", 50))
+# Target streaming rate capped at 5 FPS to guarantee continuous 90-day VM cloud survival
+STREAM_TARGET_FPS = int(os.environ.get("IBVAP_STREAM_FPS", 5))
+# Max continuous stream duration per connection before auto-sleep (default: 90 seconds)
+MAX_STREAM_SECONDS = float(os.environ.get("IBVAP_MAX_STREAM_SECONDS", 90.0))
 # When True, refreshing the web page resets active alert counters to 0 for a clean evaluation demo
 RESET_ON_REFRESH = os.environ.get("IBVAP_RESET_ON_REFRESH", "true").lower() == "true"
 

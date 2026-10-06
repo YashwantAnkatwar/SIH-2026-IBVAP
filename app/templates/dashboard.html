@@ -2736,7 +2736,7 @@ async function stopDemoSession() {
    ========================================================================== */
 let isStreamPausedForBandwidth = false;
 let userIdleTimer = null;
-const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+const IDLE_LIMIT_MS = 90 * 1000; // 90 seconds auto-sleep (preserves cloud egress credits)
 
 function pauseLiveStreamsForBandwidth() {
   if (isStreamPausedForBandwidth) return;
@@ -2745,7 +2745,18 @@ function pauseLiveStreamsForBandwidth() {
     if (!img.dataset.streamSrc && img.src && img.src.includes('/video_feed/')) {
       img.dataset.streamSrc = img.src.split('?')[0];
     }
-    img.src = '';
+    try {
+      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+        const cvs = document.createElement('canvas');
+        cvs.width = img.naturalWidth;
+        cvs.height = img.naturalHeight;
+        const ctx = cvs.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        img.src = cvs.toDataURL('image/jpeg', 0.65);
+      }
+    } catch (e) {
+      // Keep existing image if canvas cannot capture
+    }
   });
   const banner = document.getElementById('bandwidth-saver-badge');
   if (banner) banner.style.display = 'flex';
@@ -2755,8 +2766,9 @@ function resumeLiveStreamsFromBandwidth() {
   if (!isStreamPausedForBandwidth) return;
   isStreamPausedForBandwidth = false;
   document.querySelectorAll('.camera-card .feed-wrap img').forEach(img => {
-    if (img.dataset.streamSrc) {
-      img.src = img.dataset.streamSrc + '?t=' + Date.now();
+    const target = img.dataset.streamSrc || (img.src && img.src.includes('/video_feed/') ? img.src : '');
+    if (target) {
+      img.src = target.split('?')[0] + '?t=' + Date.now();
     }
   });
   const banner = document.getElementById('bandwidth-saver-badge');
