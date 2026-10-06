@@ -189,6 +189,19 @@ def test_unknown_camera_video_feed_returns_404():
     assert resp.status_code == 404
 
 
+def test_valid_camera_video_feed_streams_mjpeg():
+    mgr = FakeCameraManager()
+    mgr.workers["BOP-01"].get_latest_jpeg = lambda: b"\xff\xd8\xff\xe0mock_jpeg"
+    app = dashboard.create_app(mgr)
+    client = app.test_client()
+    resp = client.get("/video_feed/BOP-01")
+    assert resp.status_code == 200
+    assert "multipart/x-mixed-replace" in resp.headers.get("Content-Type", "")
+    first_chunk = next(resp.response)
+    assert b"--frame" in first_chunk
+    assert b"Content-Type: image/jpeg" in first_chunk
+
+
 def test_heatmap_endpoint_returns_real_grid():
     client = _client()
     resp = client.get("/api/heatmap/BOP-01")

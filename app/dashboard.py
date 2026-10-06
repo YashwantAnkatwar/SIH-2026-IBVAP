@@ -923,6 +923,8 @@ def _mjpeg_generator(worker):
     start_time = time.time()
     # Hard server-side safety limit: auto-terminate stream after 90 seconds continuous broadcast
     # to protect cloud egress bandwidth even if a browser/bot leaves the TCP connection open.
+    max_duration = getattr(config, "MAX_STREAM_SECONDS", 90.0)
+
     while getattr(worker, "running", True):
         now = time.time()
         # When connection exceeds max_duration (e.g. idle unattended tab), throttle to 1 frame every 4 seconds
